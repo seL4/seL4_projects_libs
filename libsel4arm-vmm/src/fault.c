@@ -596,6 +596,9 @@ enum fault_width fault_get_width(fault_t *f)
             case 2:
                 f->width = WIDTH_WORD;
                 break;
+            case 3:
+                f->width = WIDTH_DOUBLEWORD;
+                break;
             default:
                 print_fault(f);
                 assert(0);
