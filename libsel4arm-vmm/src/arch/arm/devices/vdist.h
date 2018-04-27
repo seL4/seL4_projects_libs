@@ -234,7 +234,7 @@ static inline int handle_vgic_dist_fault(struct device *d, vm_t *vm, fault_t *fa
         /* Read fault */
     } else if (fault_is_read(fault)) {
         fault_set_data(fault, *reg);
-        return ignore_fault(fault);
+        return advance_fault(fault);
     } else {
         uint32_t data;
         switch (act) {
