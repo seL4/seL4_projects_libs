@@ -88,7 +88,7 @@ void *map_emulated_device(vm_t *vm, const struct device *d);
  * @param[in] d    A description of the device to check
  * @return         non-zero if the address belongs to the device
  */
-static inline int dev_paddr_in_range(uint32_t addr, const struct device *d)
+static inline int dev_paddr_in_range(seL4_Word addr, const struct device* d)
 {
     return ((addr >= d->pstart) && addr < (d->pstart + d->size));
 }
