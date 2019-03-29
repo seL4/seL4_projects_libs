@@ -413,7 +413,6 @@ int vm_event(vm_t *vm, seL4_MessageInfo_t tag)
             new_wfi_fault(fault);
             return 0;
         } else {
-            printf("Unhandled VCPU fault from [%s]: HSR 0x%08x\n", vm->name, hsr);
             if ((hsr & 0xfc300000) == 0x60200000 || hsr == 0xf2000800) {
                 seL4_UserContext *regs;
                 new_wfi_fault(fault);
@@ -423,8 +422,10 @@ int vm_event(vm_t *vm, seL4_MessageInfo_t tag)
                                         sizeof(*regs) / sizeof(regs->pc), regs);
                 restart_fault(fault);
                 return 0;
+            } else {
+                printf("Unhandled VCPU fault from [%s]: HSR 0x%08x\n", vm->name, hsr);
+                return -1;
             }
-            return -1;
         }
     }
     break;
