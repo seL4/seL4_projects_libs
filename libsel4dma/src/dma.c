@@ -34,6 +34,8 @@
 #define DMA_MINALIGN_BYTES 32
 #elif defined(CONFIG_PLAT_EXYNOS5)
 #define DMA_MINALIGN_BYTES 32
+#elif defined(CONFIG_PLAT_ZYNQMP)
+#define DMA_MINALIGN_BYTES 32
 #else
 #warning Unknown platform. DMA alignment defaulting to 32 bytes.
 #define DMA_MINALIGN_BYTES 32
@@ -530,5 +532,3 @@ int dma_dmaman_init(dma_morecore_fn morecore, ps_dma_cache_op_fn_t cache_ops,
         return -1;
     }
 }
-
-
