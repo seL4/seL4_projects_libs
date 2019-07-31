@@ -332,12 +332,16 @@ int handle_vgic_maintenance(vm_t *vm, int idx)
     /* Check the overflow list for pending IRQs */
     lr[idx] = NULL;
     vgic_t *vgic = vgic_device_get_vgic(d);
-    for (size_t i = vgic->lr_overflow.head; i != vgic->lr_overflow.tail; i = LR_OF_NEXT(i)) {
-        int err = vgic_vcpu_inject_irq(d, vm, &vgic->lr_overflow.irqs[i]);
-        assert(!err);
+    while (vgic->lr_overflow.head != vgic->lr_overflow.tail) {
+        struct virq_handle *irq = &vgic->lr_overflow.irqs[vgic->lr_overflow.head];
+        int err = vgic_vcpu_inject_irq(d, vm, irq);
+        if (err) {
+            // handle this next time
+            break;
+        } else {
+            vgic->lr_overflow.head = LR_OF_NEXT(vgic->lr_overflow.head);
+        }
     }
-    vgic->lr_overflow.head = 0;
-    vgic->lr_overflow.tail = 0;
 
 #ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
     vm->unlock();
