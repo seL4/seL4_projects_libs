@@ -514,7 +514,6 @@ static void vgic_dist_reset(struct device *d)
 
 virq_handle_t vm_virq_new(vm_t *vm, int virq, void (*ack)(void *), void *token)
 {
-    struct virq_handle *virq_data;
     struct device *vgic_device;
     vgic_t *vgic;
     int err;
@@ -526,20 +525,7 @@ virq_handle_t vm_virq_new(vm_t *vm, int virq, void (*ack)(void *), void *token)
     vgic = vgic_device_get_vgic(vgic_device);
     assert(vgic);
 
-    virq_data = malloc(sizeof(*virq_data));
-    if (!virq_data) {
-        return NULL;
-    }
-    virq_data->virq = virq;
-    virq_data->token = token;
-    virq_data->ack = ack;
-    virq_data->vm = vm;
-    err = virq_add(vgic, virq_data);
-    if (err) {
-        free(virq_data);
-        return NULL;
-    }
-    return virq_data;
+    return virq_add(vgic, vm, virq, ack, token);
 }
 
 int vm_inject_IRQ(virq_handle_t virq)

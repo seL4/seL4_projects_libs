@@ -36,7 +36,7 @@ typedef struct vgic {
     /// IRQs that would not fit in the vcpu list registers
     struct lr_of lr_overflow;
     /// Complete set of virtual irqs
-    struct virq_handle *virqs[MAX_VIRQS];
+    struct virq_handle virqs[MAX_VIRQS];
     /// Virtual distributer registers
     struct gic_dist_map *dist;
 } vgic_t;
@@ -55,23 +55,27 @@ static inline struct virq_handle *virq_find_irq_data(vgic_t *vgic, int virq)
 {
     int i;
     for (i = 0; i < MAX_VIRQS; i++) {
-        if (vgic->virqs[i] && vgic->virqs[i]->virq == virq) {
-            return vgic->virqs[i];
+        if (vgic->virqs[i].virq == virq) {
+            return &vgic->virqs[i];
         }
     }
     return NULL;
 }
 
-static inline int virq_add(vgic_t *vgic, struct virq_handle *virq_data)
+static inline virq_handle_t virq_add(vgic_t *vgic, vm_t *vm, int virq,
+                                     void (*ack)(void *), void *token)
 {
     int i;
     for (i = 0; i < MAX_VIRQS; i++) {
-        if (vgic->virqs[i] == NULL) {
-            vgic->virqs[i] = virq_data;
-            return 0;
+        if (vgic->virqs[i].virq == 0) {
+            vgic->virqs[i].virq = virq;
+            vgic->virqs[i].token = token;
+            vgic->virqs[i].ack = ack;
+            vgic->virqs[i].vm = vm;
+            return &vgic->virqs[i];
         }
     }
-    return -1;
+    return NULL;
 }
 
 static inline int virq_init(vgic_t *vgic)
