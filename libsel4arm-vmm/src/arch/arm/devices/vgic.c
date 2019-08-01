@@ -69,13 +69,6 @@
 #define DDIST(...) do{}while(0)
 #endif
 
-#define IRQ_IDX(irq) ((irq) / 32)
-#define IRQ_BIT(irq) (1U << ((irq) % 32))
-
-#define not_pending(...) !is_pending(__VA_ARGS__)
-#define not_active(...)  !is_active(__VA_ARGS__)
-#define not_enabled(...) !is_enabled(__VA_ARGS__)
-
 enum gic_dist_action {
     ACTION_READONLY,
     ACTION_PASSTHROUGH,

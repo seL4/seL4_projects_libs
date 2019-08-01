@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "gic.h"
+
 #define GIC_DIST_PADDR       (GIC_PADDR + 0x1000)
 #define GIC_CPU_PADDR        (GIC_PADDR + 0x2000)
 #define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x4000)
