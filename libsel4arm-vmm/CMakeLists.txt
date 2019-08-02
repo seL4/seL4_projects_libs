@@ -40,11 +40,15 @@ file(
     GLOB
         sources
         src/*.c
-        src/arch/arm/*/*.c
         src/images/*.c
         src/devices/*.c
         src/plat/${KernelPlatform}/*/*.c
         src/sel4_arch/${KernelSel4Arch}/*.c
+)
+list(APPEND
+           sources
+           src/arch/arm/devices/vram.c
+           src/arch/arm/devices/vgic.c
 )
 
 add_library(sel4arm-vmm STATIC EXCLUDE_FROM_ALL ${sources})
