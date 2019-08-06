@@ -187,7 +187,6 @@ void *map_vm_device(vm_t *vm, uintptr_t pa, uintptr_t va, seL4_CapRights_t right
 
 void *map_emulated_device(vm_t *vm, const struct device *d)
 {
-    cspacepath_t vm_frame, vmm_frame;
     vspace_t *vm_vspace, *vmm_vspace;
     void *vm_addr, *vmm_addr;
     reservation_t res;
@@ -201,27 +200,28 @@ void *map_emulated_device(vm_t *vm, const struct device *d)
     size = d->size;
     vm_vspace = vm_get_vspace(vm);
     vmm_vspace = vm->vmm_vspace;
-    assert(size == 0x1000);
 
-    /* Create a frame (and a copy for the VMM) */
-    err = vka_alloc_frame(vka, 12, &frame);
-    assert(!err);
-    if (err) {
-        return NULL;
-    }
-    vka_cspace_make_path(vka, frame.cptr, &vm_frame);
-    err = vka_cspace_alloc_path(vka, &vmm_frame);
-    assert(!err);
-    if (err) {
-        vka_free_object(vka, &frame);
-        return NULL;
-    }
-    err = vka_cnode_copy(&vmm_frame, &vm_frame, seL4_AllRights);
-    assert(!err);
-    if (err) {
-        vka_cspace_free(vka, vm_frame.capPtr);
-        vka_free_object(vka, &frame);
-        return NULL;
+    size_t frame_size = sel4_page_size_bits_for_memory_region(size);
+    size_t n_frames = size / (1u << frame_size);
+    seL4_CPtr *vm_frames = calloc(n_frames, sizeof(seL4_CPtr));
+    ZF_LOGF_IF(vm_frames == NULL, "Failed to calloc");
+    seL4_CPtr *vmm_frames = calloc(n_frames, sizeof(seL4_CPtr));
+    ZF_LOGF_IF(vmm_frames == NULL, "Failed to calloc");
+
+    for (int i = 0; i < n_frames; i++) {
+        /* Create a frame (and a copy for the VMM) */
+        err = vka_alloc_frame(vka, frame_size, &frame);
+        ZF_LOGF_IF(err, "failed to alloc frame");
+
+        cspacepath_t vm_frame, vmm_frame;
+        vka_cspace_make_path(vka, frame.cptr, &vm_frame);
+        err = vka_cspace_alloc_path(vka, &vmm_frame);
+        ZF_LOGF_IF(err, "bah");
+        vm_frames[i] = vm_frame.capPtr;
+
+        err = vka_cnode_copy(&vmm_frame, &vm_frame, seL4_AllRights);
+        ZF_LOGF_IF(err, "bah2");
+        vmm_frames[i] = vmm_frame.capPtr;
     }
 
     /* Map the frame to the VM */
@@ -229,31 +229,19 @@ void *map_emulated_device(vm_t *vm, const struct device *d)
 
     seL4_CapRights_t rights = seL4_CanRead;
     res = vspace_reserve_range_at(vm_vspace, vm_addr, size, rights, 0);
-    assert(res.res);
-    if (!res.res) {
-        vka_cspace_free(vka, vm_frame.capPtr);
-        vka_cspace_free(vka, vmm_frame.capPtr);
-        vka_free_object(vka, &frame);
-        return NULL;
-    }
-    err = vspace_map_pages_at_vaddr(vm_vspace, &vm_frame.capPtr, NULL, vm_addr,
-                                    1, 12, res);
+    ZF_LOGF_IF(!res.res, "Failed to reserve range");
+    err = vspace_map_pages_at_vaddr(vm_vspace, vm_frames, NULL, vm_addr,
+                                    n_frames, frame_size, res);
     vspace_free_reservation(vm_vspace, res);
-    assert(!err);
-    if (err) {
-        printf("Failed to provide memory\n");
-        vka_cspace_free(vka, vm_frame.capPtr);
-        vka_cspace_free(vka, vmm_frame.capPtr);
-        vka_free_object(vka, &frame);
-        return NULL;
-    }
-    vmm_addr = vspace_map_pages(vmm_vspace, &vmm_frame.capPtr, NULL, seL4_AllRights,
-                                1, 12, 0);
+    vmm_addr = vspace_map_pages(vmm_vspace, vmm_frames, NULL, seL4_AllRights,
+                                n_frames, frame_size, 0);
     assert(vmm_addr);
     if (vmm_addr == NULL) {
         return NULL;
     }
 
+    free(vm_frames);
+    free(vmm_frames);
     return vmm_addr;
 }
 
