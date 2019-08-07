@@ -227,7 +227,7 @@ void *map_emulated_device(vm_t *vm, const struct device *d)
     /* Map the frame to the VM */
     DMAP("Mapping emulated device ipa0x%x\n", (uint32_t)vm_addr);
 
-    seL4_CapRights_t rights = seL4_CanRead;
+    seL4_CapRights_t rights = seL4_NoRights;
     res = vspace_reserve_range_at(vm_vspace, vm_addr, size, rights, 0);
     assert(res.res);
     if (!res.res) {
