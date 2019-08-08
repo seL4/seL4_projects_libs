@@ -13,9 +13,13 @@
 
 #include <stdint.h>
 
+#include <autoconf.h>
+
 #include <sel4arm-vmm/fault.h>
 #include <platsupport/gpio.h>
 #include <platsupport/plat/clock.h>
+
+#define NO_STREAM_ID 0
 
 typedef struct vm vm_t;
 
@@ -56,7 +60,10 @@ struct device {
     seL4_Word pstart;
 /// Device mapping size */
     seL4_Word size;
-
+#ifdef CONFIG_ARM_SMMU_V2
+/// Stream ID */
+    uint16_t sid;
+#endif
 /// Fault handler */
     int (*handle_page_fault)(struct device *d, vm_t *vm, fault_t *fault);
 /// device emulation private data */
