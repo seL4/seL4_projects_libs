@@ -64,11 +64,8 @@ static struct gic_dist_map *vgic_priv_get_dist(struct device *d) {
 
 int vgic_vcpu_inject_irq(vgic_t *vgic, seL4_CPtr vcpu, struct virq_handle *irq)
 {
-    int err;
-    int i;
-
-    i = vgic_find_free_irq(vgic);
-    err = seL4_ARM_VCPU_InjectIRQ(vcpu, irq->virq, 0, 0, i);
+    int i = vgic_find_free_irq(vgic);
+    seL4_Error err = seL4_ARM_VCPU_InjectIRQ(vcpu, irq->virq, 0, 0, i);
     assert((i < 4) || err);
     if (!err) {
         /* Shadow */
@@ -88,13 +85,10 @@ int handle_vgic_maintenance(vm_t *vm, int idx)
 #endif //CONCONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
 
     /* STATE d) */
-    struct device *d;
-    struct gic_dist_map *gic_dist;
-    struct virq_handle **lr;
+    struct device *d = vm_find_device_by_id(vm, DEV_VGIC_DIST);
+    struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
 
-    d = vm_find_device_by_id(vm, DEV_VGIC_DIST);
     assert(d);
-    gic_dist = vgic_priv_get_dist(d);
     vgic_t *vgic = vgic_device_get_vgic(d);
     assert(vgic->irq[idx]);
 
@@ -115,8 +109,7 @@ int handle_vgic_maintenance(vm_t *vm, int idx)
 
 static void vgic_dist_reset(struct device *d)
 {
-    struct gic_dist_map *gic_dist;
-    gic_dist = vgic_priv_get_dist(d);
+    struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
     memset(gic_dist, 0, sizeof(*gic_dist));
     gic_dist->ic_type         = 0x0000fce7; /* RO */
     gic_dist->dist_ident      = 0x0200043b; /* RO */
@@ -160,17 +153,15 @@ static void vgic_dist_reset(struct device *d)
 
 int vm_inject_IRQ(virq_handle_t virq)
 {
-    struct device *vgic_device;
-    vm_t *vm;
     assert(virq);
-    vm = virq->vm;
+    vm_t *vm = virq->vm;
 
     // vm->lock();
 
     DIRQ("VM received IRQ %d\n", virq->virq);
 
     /* Grab a handle to the VGIC */
-    vgic_device = vm_find_device_by_id(vm, DEV_VGIC_DIST);
+    struct device *vgic_device = vm_find_device_by_id(vm, DEV_VGIC_DIST);
     if (vgic_device == NULL) {
         return -1;
     }
@@ -193,24 +184,19 @@ int vm_inject_IRQ(virq_handle_t virq)
  */
 int vm_install_vgic(vm_t *vm)
 {
-    struct device dist, vcpu;
-    vgic_t *vgic;
-    void *addr;
-    int err;
-
-    vgic = malloc(sizeof(*vgic));
+    vgic_t *vgic = malloc(sizeof(*vgic));
     if (!vgic) {
         assert(!"Unable to malloc memory for VGIC");
         return -1;
     }
-    err = virq_init(vgic);
+    int err = virq_init(vgic);
     if (err) {
         free(vgic);
         return -1;
     }
 
     /* Distributor */
-    dist = dev_vgic_dist;
+    struct device dist = dev_vgic_dist;
     vgic->dist = map_emulated_device(vm, &dev_vgic_dist);
     assert(vgic->dist);
     if (vgic->dist == NULL) {
@@ -219,15 +205,15 @@ int vm_install_vgic(vm_t *vm)
 
     dist.priv = (void *)vgic;
     vgic_dist_reset(&dist);
-    err = vm_add_device(vm, &dist);
+    int err = vm_add_device(vm, &dist);
     if (err) {
         free(dist.priv);
         return -1;
     }
 
     /* Remap VCPU to CPU */
-    vcpu = dev_vgic_vcpu;
-    addr = map_vm_device(vm, vcpu.pstart, dev_vgic_cpu.pstart, seL4_AllRights);
+    struct device vcpu = dev_vgic_vcpu;
+    void *addr = map_vm_device(vm, vcpu.pstart, dev_vgic_cpu.pstart, seL4_AllRights);
     assert(addr);
     if (!addr) {
         free(dist.priv);
