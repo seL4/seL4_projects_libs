@@ -184,14 +184,9 @@ int vm_inject_IRQ(virq_handle_t virq)
  */
 int vm_install_vgic(vm_t *vm)
 {
-    vgic_t *vgic = malloc(sizeof(*vgic));
+    vgic_t *vgic = calloc(1, sizeof(*vgic));
     if (!vgic) {
         assert(!"Unable to malloc memory for VGIC");
-        return -1;
-    }
-    int err = virq_init(vgic);
-    if (err) {
-        free(vgic);
         return -1;
     }
 

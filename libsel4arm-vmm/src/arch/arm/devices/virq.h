@@ -83,16 +83,6 @@ static inline int virq_add(vgic_t *vgic, struct virq_handle *virq_data)
     return -1;
 }
 
-static inline int virq_init(vgic_t *vgic)
-{
-    memset(vgic->irq, 0, sizeof(vgic->irq));
-    memset(vgic->virqs, 0, sizeof(vgic->virqs));
-    vgic->lr_overflow.head = 0;
-    vgic->lr_overflow.tail = 0;
-    vgic->lr_overflow.full = false;
-    return 0;
-}
-
 static inline int vgic_find_free_irq(vgic_t *vgic) {
     for (int i = 0; i < 64; i++) {
         if (vgic->irq[i] == NULL) {
