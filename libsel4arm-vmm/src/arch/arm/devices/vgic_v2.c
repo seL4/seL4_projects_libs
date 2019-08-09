@@ -95,16 +95,15 @@ int handle_vgic_maintenance(vm_t *vm, int idx)
     d = vm_find_device_by_id(vm, DEV_VGIC_DIST);
     assert(d);
     gic_dist = vgic_priv_get_dist(d);
-    lr = vgic_priv_get_lr(d);
-    assert(lr[idx]);
+    vgic_t *vgic = vgic_device_get_vgic(d);
+    assert(vgic->irq[idx]);
 
     /* Clear pending */
-    DIRQ("Maintenance IRQ %d\n", lr[idx]->virq);
-    vgic_dist_set_pending(gic_dist, lr[idx]->virq, false);
-    virq_ack(lr[idx]);
+    DIRQ("Maintenance IRQ %d\n", vgic->irq[idx]->virq);
+    vgic_dist_set_pending(gic_dist, vgic->irq[idx]->virq, false);
+    virq_ack(vgic->irq[idx]);
 
-    lr[idx] = NULL;
-    vgic_t *vgic = vgic_device_get_vgic(d);
+    vgic->irq[idx] = NULL;
     vgic_handle_overflow(vgic, vm->vcpu.cptr);
 #ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
     vm->unlock();

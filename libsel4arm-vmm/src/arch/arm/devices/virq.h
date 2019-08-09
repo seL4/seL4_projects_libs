@@ -50,14 +50,6 @@ static inline vgic_t *vgic_device_get_vgic(struct device *d)
      return (vgic_t *)d->priv;
 }
 
-
-static inline struct virq_handle **vgic_priv_get_lr(struct device *d)
-{
-     assert(d);
-     assert(d->priv);
-     return vgic_device_get_vgic(d)->irq;
-}
-
 static inline vm_t *virq_get_vm(struct virq_handle *irq)
 {
     return irq->vm;
