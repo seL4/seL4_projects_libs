@@ -186,7 +186,7 @@ int vm_install_vgic(vm_t *vm)
 {
     vgic_t *vgic = calloc(1, sizeof(*vgic));
     if (!vgic) {
-        assert(!"Unable to malloc memory for VGIC");
+        ZF_LOGF("Unable to malloc memory for VGIC");
         return -1;
     }
 
