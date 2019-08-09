@@ -1144,7 +1144,7 @@ int vm_install_vgic(vm_t *vm)
 
 int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
 {
-    int idx = seL4_GetMR(seL4_UnknownSyscall_ARG0);
+    int idx = seL4_GetMR(seL4_VGICMaintenance_IDX);
     /* Currently not handling spurious IRQs */
     assert(idx >= 0);
 
