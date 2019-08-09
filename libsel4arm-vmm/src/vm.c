@@ -385,7 +385,7 @@ int vm_event(vm_t *vm, seL4_MessageInfo_t tag)
         int idx;
         int err;
         assert(length == seL4_VGICMaintenance_Length);
-        idx = seL4_GetMR(seL4_UnknownSyscall_ARG0);
+        idx = seL4_GetMR(seL4_VGICMaintenance_IDX);
         /* Currently not handling spurious IRQs */
         assert(idx >= 0);
 
