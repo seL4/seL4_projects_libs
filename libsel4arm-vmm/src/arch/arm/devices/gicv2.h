@@ -14,12 +14,14 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define GIC_DIST_PADDR       (GIC_PADDR + 0x1000)
-#define GIC_DIST_SIZE        0x1000
 #define GIC_CPU_PADDR        (GIC_PADDR + 0x2000)
 #define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x4000)
 #define GIC_VCPU_PADDR       (GIC_PADDR + 0x6000)
+
+#define GIC_ENABLED 1
 
 /* Memory map for GICv2 distributer */
 struct gic_dist_map {
@@ -70,6 +72,19 @@ static inline struct gic_dist_map *priv_get_dist(void *priv)
     return (struct gic_dist_map *) priv;
 }
 
+static inline bool gic_dist_is_enabled(struct gic_dist_map *gic_dist)
+{
+    return gic_dist->enable;
+}
+
+static inline void gic_dist_enable(struct gic_dist_map *gic_dist) {
+	gic_dist->enable = 1;
+}
+
+static inline void gic_dist_disable(struct gic_dist_map *gic_dist)
+{
+    gic_dist->enable = 0;
+}
 
 extern const struct device dev_vgic_vcpu;
 extern const struct device dev_vgic_cpu;

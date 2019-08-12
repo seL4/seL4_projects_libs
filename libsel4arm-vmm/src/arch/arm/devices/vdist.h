@@ -137,14 +137,14 @@ static inline int is_active(struct gic_dist_map *gic_dist, int irq)
 static inline int vgic_dist_enable(struct gic_dist_map *gic_dist)
 {
     DDIST("enabling gic distributer\n");
-    gic_dist->enable = 1;
+    gic_dist_enable(gic_dist);
     return 0;
 }
 
 static inline int vgic_dist_disable(struct gic_dist_map *gic_dist)
 {
     DDIST("disabling gic distributer\n");
-    gic_dist->enable = 0;
+    gic_dist_disable(gic_dist);
     return 0;
 }
 
@@ -184,7 +184,7 @@ static inline int vgic_dist_set_pending_irq(vgic_t *vgic, seL4_CPtr vcpu, int ir
     struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
     struct virq_handle *virq_data = virq_find_irq_data(vgic, irq);
     /* If it is enables, inject the IRQ */
-    if (virq_data && gic_dist->enable && is_enabled(gic_dist, irq)) {
+    if (virq_data && gic_dist_is_enabled(gic_dist) && is_enabled(gic_dist, irq)) {
         DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
 
         vgic_dist_set_pending(gic_dist, virq_data->virq, true);
@@ -248,7 +248,7 @@ static inline int handle_vgic_dist_fault(struct device *d, vm_t *vm, fault_t *fa
         case ACTION_ENABLE:
             *reg = fault_emulate(fault, *reg);
             data = fault_get_data(fault);
-            if (data == 1) {
+            if (data == GIC_ENABLED) {
                 vgic_dist_enable(gic_dist);
             } else if (data == 0) {
                 vgic_dist_disable(gic_dist);
