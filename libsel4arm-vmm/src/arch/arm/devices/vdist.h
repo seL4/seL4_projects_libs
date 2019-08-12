@@ -92,3 +92,236 @@ static inline enum gic_dist_action gic_dist_get_action(int offset)
 }
 
 extern const struct device dev_vgic_dist;
+
+// this must be provided by files including this file, to select the appropriate
+// gic dist per the hardware.
+struct gic_dist_map;
+
+static inline void vgic_dist_set_pending(struct gic_dist_map *gic_dist, int irq, int v)
+{
+    if (v) {
+        gic_dist->pending_set[IRQ_IDX(irq)] |= IRQ_BIT(irq);
+        gic_dist->pending_clr[IRQ_IDX(irq)] |= IRQ_BIT(irq);
+    } else {
+        gic_dist->pending_set[IRQ_IDX(irq)] &= ~IRQ_BIT(irq);
+        gic_dist->pending_clr[IRQ_IDX(irq)] &= ~IRQ_BIT(irq);
+    }
+}
+
+static inline int is_pending(struct gic_dist_map *gic_dist, int irq)
+{
+    return !!(gic_dist->pending_set[IRQ_IDX(irq)] & IRQ_BIT(irq));
+}
+
+static inline void set_enable(struct gic_dist_map *gic_dist, int irq, int v)
+{
+    if (v) {
+        gic_dist->enable_set[IRQ_IDX(irq)] |= IRQ_BIT(irq);
+        gic_dist->enable_clr[IRQ_IDX(irq)] |= IRQ_BIT(irq);
+    } else {
+        gic_dist->enable_set[IRQ_IDX(irq)] &= ~IRQ_BIT(irq);
+        gic_dist->enable_clr[IRQ_IDX(irq)] &= ~IRQ_BIT(irq);
+    }
+}
+
+static inline int is_enabled(struct gic_dist_map *gic_dist, int irq)
+{
+    return !!(gic_dist->enable_set[IRQ_IDX(irq)] & IRQ_BIT(irq));
+}
+
+static inline int is_active(struct gic_dist_map *gic_dist, int irq)
+{
+    return !!(gic_dist->active[IRQ_IDX(irq)] & IRQ_BIT(irq));
+}
+
+static inline int vgic_dist_enable(struct gic_dist_map *gic_dist)
+{
+    DDIST("enabling gic distributer\n");
+    gic_dist->enable = 1;
+    return 0;
+}
+
+static inline int vgic_dist_disable(struct gic_dist_map *gic_dist)
+{
+    DDIST("disabling gic distributer\n");
+    gic_dist->enable = 0;
+    return 0;
+}
+
+static inline int vgic_dist_enable_irq(vgic_t *vgic, struct gic_dist_map *gic_dist, int irq)
+{
+    struct virq_handle *virq_data = virq_find_irq_data(vgic, irq);
+    DDIST("enabling irq %d\n", irq);
+    set_enable(gic_dist, irq, true);
+    if (virq_data) {
+        /* STATE b) */
+        if (not_pending(gic_dist, virq_data->virq)) {
+            virq_ack(virq_data);
+        }
+    } else {
+        DDIST("enabled irq %d has no handle", irq);
+    }
+    return 0;
+}
+
+static inline int vgic_dist_disable_irq(struct gic_dist_map *gic_dist, int irq)
+{
+    /* STATE g) */
+    if (irq >= 16) {
+        DDIST("disabling irq %d\n", irq);
+        set_enable(gic_dist, irq, false);
+    }
+    return 0;
+}
+
+static inline int vgic_dist_set_pending_irq(vgic_t *vgic, seL4_CPtr vcpu, int irq)
+{
+#ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
+    vm->lock();
+#endif //CONCONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
+
+    /* STATE c) */
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
+    struct virq_handle *virq_data = virq_find_irq_data(vgic, irq);
+    /* If it is enables, inject the IRQ */
+    if (virq_data && gic_dist->enable && is_enabled(gic_dist, irq)) {
+        DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
+
+        vgic_dist_set_pending(gic_dist, virq_data->virq, true);
+        int err = vgic_vcpu_inject_irq(vgic, vcpu, virq_data);
+        assert(!err);
+
+#ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
+        vm->unlock();
+#endif //CONCONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
+        return err;
+    } else {
+        /* No further action */
+        DDIST("IRQ not enabled (%d)\n", irq);
+    }
+
+#ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
+    vm->unlock();
+#endif //CONCONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
+
+    return 0;
+}
+
+static inline int vgic_dist_clr_pending_irq(struct gic_dist_map *gic_dist, int irq)
+{
+    DDIST("clr pending irq %d\n", irq);
+    vgic_dist_set_pending(gic_dist, irq, false);
+    return 0;
+}
+
+static inline int handle_vgic_dist_fault(struct device *d, vm_t *vm, fault_t *fault)
+{
+    vgic_t *vgic = vgic_device_get_vgic(d);
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
+    uint32_t mask = fault_get_data_mask(fault);
+    int offset = fault_get_address(fault) - d->pstart;
+
+    offset = ALIGN_DOWN(offset, sizeof(uint32_t));
+
+    uint32_t *reg = (uint32_t *)((uintptr_t)gic_dist + offset);
+    enum gic_dist_action act = gic_dist_get_action(offset);
+
+    /* Out of range */
+    if (offset < 0 || offset >= sizeof(struct gic_dist_map)) {
+        DDIST("offset out of range %x %x\n", offset, sizeof(struct gic_dist_map));
+        return ignore_fault(fault);
+
+        /* Read fault */
+    } else if (fault_is_read(fault)) {
+        fault_set_data(fault, *reg);
+        return ignore_fault(fault);
+    } else {
+        uint32_t data;
+        switch (act) {
+        case ACTION_READONLY:
+            return ignore_fault(fault);
+
+        case ACTION_PASSTHROUGH:
+            *reg = fault_emulate(fault, *reg);
+            return advance_fault(fault);
+
+        case ACTION_ENABLE:
+            *reg = fault_emulate(fault, *reg);
+            data = fault_get_data(fault);
+            if (data == 1) {
+                vgic_dist_enable(gic_dist);
+            } else if (data == 0) {
+                vgic_dist_disable(gic_dist);
+            } else {
+                ZF_LOGF("Unknown enable register encoding\n");
+            }
+            return advance_fault(fault);
+
+        case ACTION_ENABLE_SET:
+            data = fault_get_data(fault);
+            /* Mask the data to write */
+            data &= mask;
+            /* Mask bits that are already set */
+            data &= ~(*reg);
+            while (data) {
+                int irq = CTZ(data);
+                data &= ~(1U << irq);
+                irq += (offset - 0x100) * 8;
+                vgic_dist_enable_irq(vgic, gic_dist, irq);
+           }
+            return ignore_fault(fault);
+
+        case ACTION_ENABLE_CLR:
+            data = fault_get_data(fault);
+            /* Mask the data to write */
+            data &= mask;
+            /* Mask bits that are already clear */
+            data &= *reg;
+            while (data) {
+                int irq = CTZ(data);
+                data &= ~(1U << irq);
+                irq += (offset - 0x180) * 8;
+                vgic_dist_disable_irq(gic_dist, irq);
+            }
+            return ignore_fault(fault);
+        case ACTION_PENDING_SET:
+            data = fault_get_data(fault);
+            /* Mask the data to write */
+            data &= mask;
+            /* Mask bits that are already set */
+            data &= ~(*reg);
+            while (data) {
+                int irq = CTZ(data);
+                data &= ~(1U << irq);
+                irq += (offset - 0x200) * 8;
+                vgic_dist_set_pending_irq(vgic, vm->vcpu.cptr, irq);
+            }
+            return ignore_fault(fault);
+
+        case ACTION_PENDING_CLR:
+            data = fault_get_data(fault);
+            /* Mask the data to write */
+            data &= mask;
+            /* Mask bits that are already clear */
+            data &= *reg;
+            while (data) {
+                int irq = CTZ(data);
+                data &= ~(1U << irq);
+                irq += (offset - 0x280) * 8;
+                vgic_dist_clr_pending_irq(gic_dist, irq);
+            }
+            return ignore_fault(fault);
+
+        case ACTION_SGI:
+            ZF_LOGF("vgic SGI not implemented!\n");
+             return ignore_fault(fault);
+
+        case ACTION_UNKNOWN:
+        default:
+            DDIST("Unknown action on offset 0x%x\n", offset);
+            return ignore_fault(fault);
+        }
+    }
+    abandon_fault(fault);
+    return -1;
+}
