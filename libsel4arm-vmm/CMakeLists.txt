@@ -48,7 +48,7 @@ file(
 list(APPEND
            sources
            src/arch/arm/devices/vram.c
-           src/arch/arm/devices/vgic.c
+           src/arch/arm/devices/vgic_v2.c
 )
 
 add_library(sel4arm-vmm STATIC EXCLUDE_FROM_ALL ${sources})
