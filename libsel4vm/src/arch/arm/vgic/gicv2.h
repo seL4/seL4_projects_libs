@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define GIC_V2
 
 /* FIXME these should be defined in a way that is friendlier to extension. */
 #if defined(CONFIG_PLAT_EXYNOS5)
@@ -43,9 +44,9 @@
 
 /* Memory map for GIC distributor */
 struct gic_dist_map {
-    uint32_t enable;                                    /* 0x000 */
-    uint32_t ic_type;                                   /* 0x004 */
-    uint32_t dist_ident;                                /* 0x008 */
+    uint32_t ctlr;                                      /* 0x000 */
+    uint32_t typer;                                     /* 0x004 */
+    uint32_t iidr;                                      /* 0x008 */
 
     uint32_t res1[29];                                  /* [0x00C, 0x080) */
 
@@ -82,7 +83,7 @@ struct gic_dist_map {
     uint32_t enable_d;                                  /* 0xDE4 */
     uint32_t res8[70];                                  /* [0xDE8, 0xF00) */
 
-    uint32_t sgi_control;                               /* 0xF00 */
+    uint32_t sgir;                                      /* 0xF00 */
     uint32_t res9[3];                                   /* [0xF04, 0xF10) */
 
     uint32_t sgi_pending_clr[CONFIG_MAX_NUM_NODES][4];  /* [0xF10, 0xF20) */
@@ -102,14 +103,14 @@ static inline struct gic_dist_map *priv_get_dist(void *priv)
 
 static inline bool gic_dist_is_enabled(struct gic_dist_map *gic_dist)
 {
-    return gic_dist->enable;
+    return gic_dist->ctlr;
 }
 
 static inline void gic_dist_enable(struct gic_dist_map *gic_dist) {
-    gic_dist->enable = 1;
+    gic_dist->ctlr = 1;
 }
 
 static inline void gic_dist_disable(struct gic_dist_map *gic_dist)
 {
-    gic_dist->enable = 0;
+    gic_dist->ctlr = 0;
 }
