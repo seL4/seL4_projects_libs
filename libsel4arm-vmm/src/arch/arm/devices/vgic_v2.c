@@ -59,7 +59,7 @@
 
 static struct gic_dist_map *vgic_priv_get_dist(struct device *d) {
     vgic_t *vgic = vgic_device_get_vgic(d);
-    return priv_get_dist(vgic->dist);
+    return priv_get_dist(vgic->registers);
 }
 
 int vgic_vcpu_inject_irq(vgic_t *vgic, seL4_CPtr vcpu, struct virq_handle *irq)
@@ -192,9 +192,9 @@ int vm_install_vgic(vm_t *vm)
 
     /* Distributor */
     struct device dist = dev_vgic_dist;
-    vgic->dist = map_emulated_device(vm, &dev_vgic_dist);
-    assert(vgic->dist);
-    if (vgic->dist == NULL) {
+    vgic->registers = map_emulated_device(vm, &dev_vgic_dist);
+    assert(vgic->registers);
+    if (vgic->registers == NULL) {
         return -1;
     }
 
@@ -235,7 +235,7 @@ const struct device dev_vgic_dist = {
 };
 
 const struct device dev_vgic_cpu = {
-    .devid = DEV_VGIC_CPU,
+    .devid = DEV_VGIC_V2_CPU,
     .name = "vgic.cpu_interface",
     .pstart = GIC_CPU_PADDR,
     .size = 0x1000,
@@ -244,7 +244,7 @@ const struct device dev_vgic_cpu = {
 };
 
 const struct device dev_vgic_vcpu = {
-    .devid = DEV_VGIC_VCPU,
+    .devid = DEV_VGIC_V2_VCPU,
     .name = "vgic.vcpu_interface",
     .pstart = GIC_VCPU_PADDR,
     .size = 0x1000,

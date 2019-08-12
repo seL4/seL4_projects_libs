@@ -28,6 +28,9 @@
 #define IRQ_IDX(irq) ((irq) / 32)
 #define IRQ_BIT(irq) (1U << ((irq) % 32))
 
+#define GIC_SGI_IRQ_MIN 16
+#define GIC_SGI_IRQ_MAX 32
+
 #define not_pending(...) !is_pending(__VA_ARGS__)
 #define not_active(...)  !is_active(__VA_ARGS__)
 #define not_enabled(...) !is_enabled(__VA_ARGS__)
@@ -181,7 +184,7 @@ static inline int vgic_dist_set_pending_irq(vgic_t *vgic, seL4_CPtr vcpu, int ir
 #endif //CONCONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
 
     /* STATE c) */
-    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->registers);
     struct virq_handle *virq_data = virq_find_irq_data(vgic, irq);
     /* If it is enables, inject the IRQ */
     if (virq_data && gic_dist_is_enabled(gic_dist) && is_enabled(gic_dist, irq)) {
@@ -217,13 +220,12 @@ static inline int vgic_dist_clr_pending_irq(struct gic_dist_map *gic_dist, int i
 static inline int handle_vgic_dist_fault(struct device *d, vm_t *vm, fault_t *fault)
 {
     vgic_t *vgic = vgic_device_get_vgic(d);
-    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->registers);
     uint32_t mask = fault_get_data_mask(fault);
     int offset = fault_get_address(fault) - d->pstart;
 
     offset = ALIGN_DOWN(offset, sizeof(uint32_t));
-
-    uint32_t *reg = (uint32_t *)((uintptr_t)gic_dist + offset);
+    uint32_t *reg = (uint32_t *)((uintptr_t)gic_dist + offset + (offset - (offset % 4)));
     enum gic_dist_action act = gic_dist_get_action(offset);
 
     /* Out of range */

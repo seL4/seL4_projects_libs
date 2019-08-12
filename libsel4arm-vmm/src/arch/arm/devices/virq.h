@@ -40,7 +40,7 @@ typedef struct vgic {
 /// Complete set of virtual irqs
      struct virq_handle *virqs[MAX_VIRQS];
 /// Virtual distributer registers
-     void *dist;
+     void *registers;
 } vgic_t;
 
 static inline vgic_t *vgic_device_get_vgic(struct device *d)
