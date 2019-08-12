@@ -52,29 +52,13 @@
 
 #include "../../../devices.h"
 #include "../../../vm.h"
+#include "virq.h"
 #include "vdist.h"
 
 #define GIC_DIST_PADDR       (GIC_PADDR + 0x1000)
 #define GIC_CPU_PADDR        (GIC_PADDR + 0x2000)
 #define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x4000)
 #define GIC_VCPU_PADDR       (GIC_PADDR + 0x6000)
-
-struct virq_handle {
-    int virq;
-    void (*ack)(void *token);
-    void *token;
-    vm_t *vm;
-};
-
-static inline vm_t *virq_get_vm(struct virq_handle *irq)
-{
-    return irq->vm;
-}
-
-static inline void virq_ack(struct virq_handle *irq)
-{
-    irq->ack(irq->token);
-}
 
 /* Memory map for GIC distributer */
 struct gic_dist_map {
@@ -118,66 +102,6 @@ struct gic_dist_map {
     uint32_t component_id[4];       /* [0xFF0, 0xFFF] */
 };
 
-#define MAX_LR_OVERFLOW 64
-#define LR_OF_NEXT(_i) (((_i) == MAX_LR_OVERFLOW - 1) ? 0 : ((_i) + 1))
-
-struct lr_of {
-    struct virq_handle irqs[MAX_LR_OVERFLOW]; /* circular buffer */
-    size_t head;
-    size_t tail;
-    bool full;
-};
-
-typedef struct vgic {
-/// Mirrors the vcpu list registers
-    struct virq_handle *irq[63];
-/// IRQs that would not fit in the vcpu list registers
-    struct lr_of lr_overflow;
-/// Complete set of virtual irqs
-    struct virq_handle *virqs[MAX_VIRQS];
-/// Virtual distributer registers
-    struct gic_dist_map *dist;
-} vgic_t;
-
-static struct virq_handle *virq_find_irq_data(vgic_t *vgic, int virq)
-{
-    int i;
-    for (i = 0; i < MAX_VIRQS; i++) {
-        if (vgic->virqs[i] && vgic->virqs[i]->virq == virq) {
-            return vgic->virqs[i];
-        }
-    }
-    return NULL;
-}
-
-static int virq_add(vgic_t *vgic, struct virq_handle *virq_data)
-{
-    int i;
-    for (i = 0; i < MAX_VIRQS; i++) {
-        if (vgic->virqs[i] == NULL) {
-            vgic->virqs[i] = virq_data;
-            return 0;
-        }
-    }
-    return -1;
-}
-
-static int virq_init(vgic_t *vgic)
-{
-    memset(vgic->irq, 0, sizeof(vgic->irq));
-    memset(vgic->virqs, 0, sizeof(vgic->virqs));
-    vgic->lr_overflow.head = 0;
-    vgic->lr_overflow.tail = 0;
-    vgic->lr_overflow.full = false;
-    return 0;
-}
-
-static inline vgic_t *vgic_device_get_vgic(struct device *d)
-{
-    assert(d);
-    assert(d->priv);
-    return (vgic_t *)d->priv;
-}
 
 static inline struct gic_dist_map *vgic_priv_get_dist(struct device *d)
 {
@@ -185,15 +109,6 @@ static inline struct gic_dist_map *vgic_priv_get_dist(struct device *d)
     assert(d->priv);
     return vgic_device_get_vgic(d)->dist;
 }
-
-static inline struct virq_handle **vgic_priv_get_lr(struct device *d)
-{
-    assert(d);
-    assert(d->priv);
-    return vgic_device_get_vgic(d)->irq;
-}
-
-
 
 static inline void set_pending(struct gic_dist_map *gic_dist, int irq, int v)
 {
@@ -241,36 +156,21 @@ static inline int is_active(struct gic_dist_map *gic_dist, int irq)
     return !!(gic_dist->active[IRQ_IDX(irq)] & IRQ_BIT(irq));
 }
 
-static int vgic_vcpu_inject_irq(struct device *d, vm_t *vm, struct virq_handle *irq)
+int vgic_vcpu_inject_irq(vgic_t *vgic, seL4_CPtr vcpu, struct virq_handle *irq)
 {
-    vgic_t *vgic;
     int err;
     int i;
 
-    vgic = vgic_device_get_vgic(d);
-
-    seL4_CPtr vcpu;
-    vcpu = vm->vcpu.cptr;
-    for (i = 0; i < 64; i++) {
-        if (vgic->irq[i] == NULL) {
-            break;
-        }
-    }
+    i = vgic_find_free_irq(vgic);
     err = seL4_ARM_VCPU_InjectIRQ(vcpu, irq->virq, 0, 0, i);
     assert((i < 4) || err);
     if (!err) {
         /* Shadow */
-        vgic->irq[i] = irq;
+        vgic_shadow_irq(vgic, i, irq);
         return err;
     } else {
-        /* Add to overflow list */
-        int idx = vgic->lr_overflow.tail;
-        ZF_LOGF_IF(vgic->lr_overflow.full, "too many overflow irqs");
-        vgic->lr_overflow.irqs[idx] = *irq;
-        vgic->lr_overflow.full = (vgic->lr_overflow.head == LR_OF_NEXT(vgic->lr_overflow.tail));
-        if (!vgic->lr_overflow.full) {
-            vgic->lr_overflow.tail = LR_OF_NEXT(idx);
-        }
+        int error = vgic_add_overflow(vgic, irq);
+        ZF_LOGF_IF(error, "too many overflow irqs");
         return 0;
     }
 }
@@ -297,20 +197,9 @@ int handle_vgic_maintenance(vm_t *vm, int idx)
     set_pending(gic_dist, lr[idx]->virq, false);
     virq_ack(lr[idx]);
 
-    /* Check the overflow list for pending IRQs */
     lr[idx] = NULL;
     vgic_t *vgic = vgic_device_get_vgic(d);
-    /* copy tail, as vgic_vcpu_inject_irq can mutate it, and we do
-     * not want to process any new overflow irqs */
-    size_t tail = vgic->lr_overflow.tail;
-    for (size_t i = vgic->lr_overflow.head; i != tail; i = LR_OF_NEXT(i)) {
-        if (vgic_vcpu_inject_irq(d, vm, &vgic->lr_overflow.irqs[i]) == 0) {
-            vgic->lr_overflow.head = LR_OF_NEXT(i);
-            vgic->lr_overflow.full = (vgic->lr_overflow.head == LR_OF_NEXT(vgic->lr_overflow.tail));
-        } else {
-            break;
-        }
-    }
+    vgic_handle_overflow(vgic, vm->vcpu.cptr);
 #ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
     vm->unlock();
 #endif //CONCONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
@@ -389,7 +278,7 @@ static int vgic_dist_set_pending_irq(struct device *d, vm_t *vm, int irq)
         DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
 
         set_pending(gic_dist, virq_data->virq, true);
-        err = vgic_vcpu_inject_irq(d, vm, virq_data);
+        err = vgic_vcpu_inject_irq(vgic, vm->vcpu.cptr, virq_data);
         assert(!err);
 
 #ifdef CONFIG_LIB_SEL4_ARM_VMM_VCHAN_SUPPORT
@@ -583,36 +472,6 @@ static void vgic_dist_reset(struct device *d)
     for (int i = 0; i < ARRAY_SIZE(gic_dist->targets); i++) {
         gic_dist->targets[i] = 0x01010101;
     }
-}
-
-virq_handle_t vm_virq_new(vm_t *vm, int virq, void (*ack)(void *), void *token)
-{
-    struct virq_handle *virq_data;
-    struct device *vgic_device;
-    vgic_t *vgic;
-    int err;
-    vgic_device = vm_find_device_by_id(vm, DEV_VGIC_DIST);
-    assert(vgic_device);
-    if (!vgic_device) {
-        return NULL;
-    }
-    vgic = vgic_device_get_vgic(vgic_device);
-    assert(vgic);
-
-    virq_data = malloc(sizeof(*virq_data));
-    if (!virq_data) {
-        return NULL;
-    }
-    virq_data->virq = virq;
-    virq_data->token = token;
-    virq_data->ack = ack;
-    virq_data->vm = vm;
-    err = virq_add(vgic, virq_data);
-    if (err) {
-        free(virq_data);
-        return NULL;
-    }
-    return virq_data;
 }
 
 int vm_inject_IRQ(virq_handle_t virq)
