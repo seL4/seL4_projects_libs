@@ -142,15 +142,6 @@ static inline int is_enabled(struct gic_dist_map *gic_dist, int irq)
     return !!(gic_dist->enable_set[IRQ_IDX(irq)] & IRQ_BIT(irq));
 }
 
-static inline void set_active(struct gic_dist_map *gic_dist, int irq, int v)
-{
-    if (v) {
-        gic_dist->active[IRQ_IDX(irq)] |= IRQ_BIT(irq);
-    } else {
-        gic_dist->active[IRQ_IDX(irq)] &= ~IRQ_BIT(irq);
-    }
-}
-
 static inline int is_active(struct gic_dist_map *gic_dist, int irq)
 {
     return !!(gic_dist->active[IRQ_IDX(irq)] & IRQ_BIT(irq));
