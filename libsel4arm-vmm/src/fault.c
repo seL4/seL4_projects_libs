@@ -300,6 +300,11 @@ static int new_fault_type(fault_t *fault, fault_type_t type)
     return err;
 }
 
+int new_smc_fault(fault_t *fault)
+{
+    return new_fault_type(fault, SMC);
+}
+
 int new_wfi_fault(fault_t *fault)
 {
     return new_fault_type(fault, WFI);
@@ -573,9 +578,14 @@ int fault_is_wfi(fault_t *f)
     return f->type == WFI;
 }
 
+int fault_is_smc(fault_t *f)
+{
+    return f->type == SMC;
+}
+
 int fault_is_32bit_instruction(fault_t *f)
 {
-    if (fault_is_wfi(f)) {
+    if (fault_is_wfi(f) || fault_is_smc(f)) {
         return !sel4arch_fault_is_thumb(f);
     }
     if (!HSR_IS_SYNDROME_VALID(f->fsr)) {

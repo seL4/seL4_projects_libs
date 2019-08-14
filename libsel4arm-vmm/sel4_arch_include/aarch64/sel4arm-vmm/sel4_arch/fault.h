@@ -22,3 +22,13 @@ static inline bool sel4arch_fault_is_thumb(fault_t *f)
 {
     return CPSR_IS_THUMB(fault_get_ctx(f)->spsr);
 }
+
+static inline seL4_Word smc_get_function_id(seL4_UserContext *u)
+{
+    return u->x0;
+}
+
+static inline seL4_Word smc_set_return_value(seL4_UserContext *u, seL4_Word val)
+{
+    u->x0 = val;
+}

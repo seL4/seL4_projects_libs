@@ -33,6 +33,7 @@ typedef enum {
     DATA,
     PREFETCH,
     WFI,
+    SMC
 } fault_type_t;
 
 /**
@@ -89,6 +90,9 @@ fault_t *fault_init(vm_t *vm);
  */
 int new_wfi_fault(fault_t *fault);
 
+/** As per new_wfi_fault, but set the type to SMC
+ */
+int new_smc_fault(fault_t *fault);
 /**
  * Populate an initialised fault structure with fault data obtained from
  * a pending fault IPC message. The reply cap to the faulting TCB will

@@ -14,7 +14,7 @@
 #include "vm.h"
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 #include <cpio/cpio.h>
 #include <vka/object.h>
 #include <vka/capops.h>
@@ -31,6 +31,9 @@
 #include "sel4arm-vmm/guest_vspace.h"
 
 #include <sel4arm-vmm/sel4_arch/vm.h>
+#include <sel4arm-vmm/sel4_arch/fault.h>
+#include <sel4arm-vmm/psci.h>
+#include <sel4arm-vmm/smc.h>
 #include <sel4vmmcore/util/io.h>
 
 //#define DEBUG_VM
@@ -65,6 +68,10 @@
 #else
 #define DVM(...) do{}while(0)
 #endif
+
+/* HSR exception codes */
+#define HSR_EC_WFI_WFE   1
+#define HSR_EC_SMC      23
 
 extern char _cpio_archive[];
 
@@ -126,6 +133,72 @@ static int handle_exception(vm_t *vm, seL4_Word ip)
     assert(!err);
     print_ctx_regs(&regs);
     return 1;
+}
+
+static int handle_psci(vm_t *vm, seL4_Word fn_number, bool convention)
+{
+    seL4_UserContext *regs = fault_get_ctx(vm->fault);
+    switch (fn_number) {
+    case PSCI_VERSION:
+        regs->x0 = (BIT(15) | BIT(1));
+        return ignore_fault(vm->fault);
+    case PSCI_MIGRATE_INFO_TYPE:
+        regs->x0 = 2; // trusted OS does not require migration
+        return ignore_fault(vm->fault);
+    default:
+        ZF_LOGE("Unhandled PSCI function id %lu\n", fn_number);
+        return -1;
+    }
+}
+
+static int handle_smc(vm_t *vm)
+{
+    fault_t *fault = vm->fault;
+    new_smc_fault(fault);
+    seL4_UserContext *regs = fault_get_ctx(fault);
+    seL4_Word id = smc_get_function_id(regs);
+    seL4_Word fn_number = smc_get_function_number(id);
+    smc_call_id_t service = smc_get_call(id);
+
+    switch (service) {
+    case SMC_CALL_ARM_ARCH:
+        ZF_LOGE("Unhandled SMC: arm architecture call %lu\n", fn_number);
+        break;
+    case SMC_CALL_CPU_SERVICE:
+        ZF_LOGE("Unhandled SMC: CPU service call %lu\n", fn_number);
+        break;
+    case SMC_CALL_SIP_SERVICE:
+        regs->x0 = -1;
+        ZF_LOGW("Ignoring SiP service call %lu\n", fn_number);
+        return ignore_fault(vm->fault);
+    case SMC_CALL_OEM_SERVICE:
+        ZF_LOGE("Unhandled SMC: OEM service call %lu\n", fn_number);
+        break;
+    case SMC_CALL_STD_SERVICE:
+        if (fn_number < PSCI_MAX) {
+            return handle_psci(vm, fn_number, smc_call_is_32(id));
+        }
+        ZF_LOGE("Unhandled SMC: standard service call %lu\n", fn_number);
+        break;
+    case SMC_CALL_STD_HYP_SERVICE:
+        ZF_LOGE("Unhandled SMC: standard hyp service call %lu\n", fn_number);
+        break;
+    case SMC_CALL_VENDOR_HYP_SERVICE:
+        ZF_LOGE("Unhandled SMC: vendor hyp service call %lu\n", fn_number);
+        break;
+    case SMC_CALL_TRUSTED_APP:
+        ZF_LOGE("Unhandled SMC: trusted app call %lu\n", fn_number);
+        break;
+    case SMC_CALL_TRUSTED_OS:
+        ZF_LOGE("Unhandled SMC: trusted os call %lu\n", fn_number);
+        break;
+    default:
+        ZF_LOGE("Unhandle SMC: unknown value service: %lu fn_number: %lu\n",
+                (unsigned long) service, fn_number);
+        break;
+    }
+
+    return -1;
 }
 
 int vm_create(const char *name, int priority,
@@ -380,11 +453,15 @@ int vm_event(vm_t *vm, seL4_MessageInfo_t tag)
         assert(length == seL4_VCPUFault_Length);
         uint32_t hsr = seL4_GetMR(seL4_UnknownSyscall_ARG0);
         /* check if the exception class (bits 26-31) of the HSR indicate WFI/WFE */
-        if ((hsr >> 26) == 1) {
+        uint32_t exception_class = hsr >> 26;
+        switch (exception_class) {
+        case HSR_EC_WFI_WFE:
             /* generate a new WFI fault */
             new_wfi_fault(fault);
             return 0;
-        } else {
+        case HSR_EC_SMC:
+            return handle_smc(vm);
+        default:
             printf("Unhandled VCPU fault from [%s]: HSR 0x%08x\n", vm->name, hsr);
             if ((hsr & 0xfc300000) == 0x60200000 || hsr == 0xf2000800) {
                 new_wfi_fault(fault);
