@@ -29,6 +29,12 @@ enum fault_width {
 #define CPSR_THUMB                 BIT(5)
 #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
 
+typedef enum {
+    DATA,
+    PREFETCH,
+    WFI,
+} fault_type_t;
+
 /**
  * Data structure representating a fault
  */
@@ -50,10 +56,8 @@ struct fault {
     seL4_Word data;
 /// Fault status register (IL and ISS fields of HSR cp15 register)
     seL4_Word fsr;
-/// 'true' if the fault was a prefetch fault rather than a data fault
-    bool is_prefetch;
-/// 'true' if we should wait for an interrupt before finishing the fault
-    bool is_wfi;
+/// type of the fault
+    fault_type_t type;
 /// For multiple str/ldr and 32 bit access, the fault is handled in stages
     int stage;
 /// If the instruction requires fetching, cache it here
