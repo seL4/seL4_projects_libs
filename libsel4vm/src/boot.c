@@ -92,6 +92,15 @@ int vm_assign_vcpu_target(vm_vcpu_t *vcpu, int target_cpu)
         ZF_LOGE("Failed to assign target cpu - A VCPU is already assigned to core %d", target_cpu);
         return -1;
     }
+
+#if CONFIG_MAX_NUM_NODES > 1
+    int err = seL4_TCB_SetAffinity(vcpu->tcb.tcb.cptr, target_cpu);
+    if (err) {
+        ZF_LOGE("[vCPU %u] Failed to set vCPU affinity to %d", vcpu->vcpu_id, target_cpu);
+        return -1;
+    }
+#endif /* CONFIG_MAX_NUM_NODES > 1 */
+
     vcpu->target_cpu = target_cpu;
     return 0;
 }
