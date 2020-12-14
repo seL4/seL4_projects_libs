@@ -7,6 +7,7 @@
 #pragma once
 
 #include <sel4vm/guest_vm.h>
+#include <sel4vmmplatsupport/arch/smc.h>
 
 /* Values in this file are taken from:
  * SMC CALLING CONVENTION
@@ -40,9 +41,3 @@ typedef enum {
 
 /* SMC VCPU fault handler */
 int handle_smc(vm_vcpu_t *vcpu, uint32_t hsr);
-
-/* SMC Helpers */
-seL4_Word smc_get_function_id(seL4_UserContext *u);
-seL4_Word smc_set_return_value(seL4_UserContext *u, seL4_Word val);
-seL4_Word smc_get_arg(seL4_UserContext *u, seL4_Word arg);
-void smc_set_arg(seL4_UserContext *u, seL4_Word arg, seL4_Word val);

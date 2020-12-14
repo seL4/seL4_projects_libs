@@ -210,6 +210,22 @@ int vm_register_unhandled_vcpu_fault_callback(vm_vcpu_t *vcpu, unhandled_vcpu_fa
 
 }
 
+int vm_register_smc_handler_callback(vm_t *vm, smc_handler_callback_fn vm_smc_handler)
+{
+    if (!vm) {
+        ZF_LOGE("Failed to register smc_handler callback: Invalid VCPU handle");
+        return -1;
+    }
+
+    if (!vm_smc_handler) {
+        ZF_LOGE("Failed to register smc_handler callback: Invalid callback");
+        return -1;
+    }
+    vm->arch.vm_smc_handler = vm_smc_handler;
+
+    return 0;
+}
+
 int vm_run_arch(vm_t *vm)
 {
     int err;

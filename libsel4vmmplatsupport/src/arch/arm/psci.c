@@ -36,36 +36,30 @@ static int start_new_vcpu(vm_vcpu_t *vcpu,  uintptr_t entry_address, uintptr_t c
     return 0;
 }
 
-int handle_psci(vm_vcpu_t *vcpu, seL4_Word fn_number, bool convention)
+int handle_psci(vm_vcpu_t *vcpu, seL4_UserContext *regs, seL4_Word fn_number, bool convention)
 {
     int err;
-    seL4_UserContext regs;
-    err = vm_get_thread_context(vcpu, &regs);
-    if (err) {
-        ZF_LOGE("Failed to get vcpu registers");
-        return -1;
-    }
     switch (fn_number) {
     case PSCI_VERSION:
-        smc_set_return_value(&regs, 0x00010000); /* version 1 */
+        smc_set_return_value(regs, 0x00010000); /* version 1 */
         break;
     case PSCI_CPU_ON: {
-        uintptr_t target_cpu = smc_get_arg(&regs, 1);
-        uintptr_t entry_point_address = smc_get_arg(&regs, 2);
-        uintptr_t context_id = smc_get_arg(&regs, 3);
+        uintptr_t target_cpu = smc_get_arg(regs, 1);
+        uintptr_t entry_point_address = smc_get_arg(regs, 2);
+        uintptr_t context_id = smc_get_arg(regs, 3);
         vm_vcpu_t *target_vcpu = vm_vcpu_for_target_cpu(vcpu->vm, target_cpu);
         if (target_vcpu == NULL) {
             target_vcpu = vm_find_free_unassigned_vcpu(vcpu->vm);
             if (target_vcpu && start_new_vcpu(target_vcpu, entry_point_address, context_id, target_cpu) == 0) {
-                smc_set_return_value(&regs, PSCI_SUCCESS);
+                smc_set_return_value(regs, PSCI_SUCCESS);
             } else {
-                smc_set_return_value(&regs, PSCI_INTERNAL_FAILURE);
+                smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
             }
         } else {
             if (is_vcpu_online(target_vcpu)) {
-                smc_set_return_value(&regs, PSCI_ALREADY_ON);
+                smc_set_return_value(regs, PSCI_ALREADY_ON);
             } else {
-                smc_set_return_value(&regs, PSCI_INTERNAL_FAILURE);
+                smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
             }
         }
 
@@ -73,24 +67,18 @@ int handle_psci(vm_vcpu_t *vcpu, seL4_Word fn_number, bool convention)
     }
     case PSCI_MIGRATE_INFO_TYPE:
         /* trusted OS does not require migration */
-        smc_set_return_value(&regs, 2);
+        smc_set_return_value(regs, 2);
         break;
     case PSCI_FEATURES:
         /* TODO Not sure if required */
-        smc_set_return_value(&regs, PSCI_NOT_SUPPORTED);
+        smc_set_return_value(regs, PSCI_NOT_SUPPORTED);
         break;
     case PSCI_SYSTEM_RESET:
-        smc_set_return_value(&regs, PSCI_SUCCESS);
+        smc_set_return_value(regs, PSCI_SUCCESS);
         break;
     default:
         ZF_LOGE("Unhandled PSCI function id %lu\n", fn_number);
         return -1;
     }
-    err = vm_set_thread_context(vcpu, regs);
-    if (err) {
-        ZF_LOGE("Failed to set vcpu context registers");
-        return -1;
-    }
-    advance_vcpu_fault(vcpu);
     return 0;
 }

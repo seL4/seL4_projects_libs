@@ -67,6 +67,7 @@ target_include_directories(
 )
 target_link_libraries(
     sel4vm
+    sel4vmmplatsupport
     muslc
     sel4
     sel4simple

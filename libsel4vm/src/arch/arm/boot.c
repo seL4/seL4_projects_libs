@@ -21,6 +21,7 @@
 #include <sel4vm/guest_vm.h>
 #include <sel4vm/guest_vm_util.h>
 #include <sel4vm/arch/guest_arm_context.h>
+#include <sel4vmmplatsupport/arch/smc.h>
 
 #include "arm_vm.h"
 #include "vm_boot.h"
@@ -40,6 +41,10 @@ int vm_init_arch(vm_t *vm)
         ZF_LOGE("Failed to initialise vm arch: Invalid vm");
         return -1;
     }
+
+    /* Set arch default values */
+    err = vm_register_smc_handler_callback(vm, vm_smc_handle_default);
+    assert(!err);
 
     /* Create a cspace */
     vka = vm->vka;
