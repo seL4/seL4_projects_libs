@@ -50,15 +50,24 @@ int handle_psci(vm_vcpu_t *vcpu, seL4_Word fn_number, bool convention)
         smc_set_return_value(&regs, 0x00010000); /* version 1 */
         break;
     case PSCI_CPU_ON: {
-        uintptr_t target_cpu = smc_get_arg(&regs, 1);
+        uintptr_t requested_cpu = smc_get_arg(&regs, 1);
         uintptr_t entry_point_address = smc_get_arg(&regs, 2);
         uintptr_t context_id = smc_get_arg(&regs, 3);
-        vm_vcpu_t *target_vcpu = vm_vcpu_for_target_cpu(vcpu->vm, target_cpu);
-        if (target_vcpu == NULL) {
-            target_vcpu = vm_find_free_unassigned_vcpu(vcpu->vm);
-            if (target_vcpu && start_new_vcpu(target_vcpu, entry_point_address, context_id, target_cpu) == 0) {
+        vm_vcpu_t *target_vcpu = NULL;
+        if ((requested_cpu >= 0) && (requested_cpu < vcpu->vm->num_vcpus)) {
+            target_vcpu = vcpu->vm->vcpus[requested_cpu];
+        } else {
+            smc_set_return_value(&regs, PSCI_INTERNAL_FAILURE);
+            break;
+        }
+
+        /* Automatically assign vcpu to an unassigned physical cpu */
+        if (target_vcpu->target_cpu == -1) {
+            int selected_cpu = vm_find_free_unassigned_cpu(vcpu->vm);
+            if ((selected_cpu >= 0) && start_new_vcpu(target_vcpu, entry_point_address, context_id, selected_cpu) == 0) {
                 smc_set_return_value(&regs, PSCI_SUCCESS);
             } else {
+                ZF_LOGE("[vCPU %u] no unused physical core left", vcpu->vcpu_id);
                 smc_set_return_value(&regs, PSCI_INTERNAL_FAILURE);
             }
         } else {
