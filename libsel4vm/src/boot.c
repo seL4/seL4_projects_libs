@@ -88,7 +88,7 @@ int vm_assign_vcpu_target(vm_vcpu_t *vcpu, int target_cpu)
         return -1;
     }
     vm_vcpu_t *target_vcpu = vm_vcpu_for_target_cpu(vcpu->vm, target_cpu);
-    if (target_vcpu) {
+    if (target_vcpu && (target_vcpu != vcpu)) {
         ZF_LOGE("Failed to assign target cpu - A VCPU is already assigned to core %d", target_cpu);
         return -1;
     }
