@@ -20,17 +20,44 @@
 #include "processor/lapic.h"
 #include "interrupt.h"
 
+#ifdef CONFIG_ARCH_X86_64
+static seL4_Word vm_msr_read(seL4_CPtr vcpu, unsigned int field)
+{
+
+    seL4_X86_VCPU_ReadMSR_t result;
+
+    assert(vcpu);
+
+    result = seL4_X86_VCPU_ReadMSR(vcpu, (seL4_Word)field);
+    assert(result.error == seL4_NoError);
+
+    return result.value;
+}
+
+static void vm_msr_write(seL4_CPtr vcpu, unsigned int field, seL4_Word value)
+{
+
+    seL4_X86_VCPU_WriteMSR_t result;
+
+    assert(vcpu);
+
+    result = seL4_X86_VCPU_WriteMSR(vcpu, (seL4_Word)field, value);
+    assert(result.error == seL4_NoError);
+}
+#endif
+
 int vm_rdmsr_handler(vm_vcpu_t *vcpu)
 {
 
     int ret = 0;
-    unsigned int msr_no;
+    seL4_Word msr_no;
     if (vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_ECX, &msr_no)) {
         return VM_EXIT_HANDLE_ERROR;
     }
     uint64_t data = 0;
+    seL4_Word vm_data;
 
-    ZF_LOGD("rdmsr ecx 0x%x\n", msr_no);
+    ZF_LOGD("rdmsr ecx 0x%lx\n", msr_no);
 
     // src reference: Linux kernel 3.11 kvm arch/x86/kvm/x86.c
     switch (msr_no) {
@@ -70,6 +97,21 @@ int vm_rdmsr_handler(vm_vcpu_t *vcpu)
         data = vm_lapic_get_base_msr(vcpu);
         break;
 
+#ifdef CONFIG_ARCH_X86_64
+    case MSR_EFER:
+        vm_get_vmcs_field(vcpu, VMX_GUEST_EFER, &vm_data);
+        data = (uint64_t) vm_data;
+        break;
+
+    case MSR_STAR:
+    case MSR_LSTAR:
+    case MSR_CSTAR:
+    case MSR_SYSCALL_MASK:
+        vm_data = vm_msr_read(vcpu->vcpu.cptr, msr_no);
+        data = (uint64_t) vm_data;
+        break;
+#endif
+
     default:
         ZF_LOGW("rdmsr WARNING unsupported msr_no 0x%x\n", msr_no);
         // generate a GP fault
@@ -93,11 +135,11 @@ int vm_wrmsr_handler(vm_vcpu_t *vcpu)
 
     int ret = 0;
 
-    unsigned int msr_no;
+    seL4_Word msr_no;
     if (vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_ECX, &msr_no)) {
         return VM_EXIT_HANDLE_ERROR;
     }
-    unsigned int val_high, val_low;
+    seL4_Word val_high, val_low;
 
     if (vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EDX, &val_high)
         || vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, &val_low)) {
@@ -123,6 +165,19 @@ int vm_wrmsr_handler(vm_vcpu_t *vcpu)
     case MSR_IA32_APICBASE:
         vm_lapic_set_base_msr(vcpu, val_low);
         break;
+
+#ifdef CONFIG_ARCH_X86_64
+    case MSR_EFER:
+        vm_set_vmcs_field(vcpu, VMX_GUEST_EFER, val_low);
+        break;
+
+    case MSR_STAR:
+    case MSR_LSTAR:
+    case MSR_CSTAR:
+    case MSR_SYSCALL_MASK:
+        vm_msr_write(vcpu->vcpu.cptr, msr_no, (seL4_Word)(((seL4_Word)val_high << 32ull) | val_low));
+        break;
+#endif
 
     default:
         ZF_LOGW("wrmsr WARNING unsupported msr_no 0x%x\n", msr_no);

@@ -37,23 +37,30 @@
 /* We need to own the PSE and PAE bits up until the guest has actually turned on paging,
  * then it can control them
  */
+#ifdef CONFIG_ARCH_X86_64
+#define VM_VMCS_CR4_MASK           (X86_CR4_VMXE)
+#define VM_VMCS_CR4_VALUE          (X86_CR4_PAE)
+#else
 #define VM_VMCS_CR4_MASK           (X86_CR4_PSE | X86_CR4_PAE | X86_CR4_VMXE)
 #define VM_VMCS_CR4_VALUE          (X86_CR4_PSE | X86_CR4_VMXE)
+#endif
 
-#define GUEST_PAGE_DIR 0x10000000
+#define PAGE_PRESENT    BIT(0)
+#define PAGE_WRITE      BIT(1)
+#define PAGE_SUPERVISOR BIT(2)
+#define PAGE_SET_SIZE   BIT(7)
 
-static int make_guest_page_dir_continued(void *access_addr, void *vaddr, void *cookie)
-{
-    /* Write into this frame as the init page directory: 4M pages, 1 to 1 mapping. */
-    uint32_t *pd = vaddr;
-    for (int i = 0; i < 1024; i++) {
-        /* Present, write, user, page size 4M */
-        pd[i] = (i << PAGE_BITS_4M) | 0x87;
-    }
-    return 0;
-}
+#define PAGE_DEFAULT   PAGE_PRESENT | PAGE_WRITE | PAGE_SUPERVISOR
+#define PAGE_ENTRY     PAGE_DEFAULT | PAGE_SET_SIZE
+#define PAGE_REFERENCE PAGE_DEFAULT
 
-static vm_frame_t pd_alloc_iterator(uintptr_t addr, void *cookie)
+#define PAGE_MASK 0x7FFFFFFFFF000ULL
+
+#define GUEST_VSPACE_ROOT     0x10000000
+#define GUEST_VSPACE_PDPT     0x10001000
+#define GUEST_VSPACE_PD       0x10002000
+
+static vm_frame_t vspace_alloc_iterator(uintptr_t addr, void *cookie)
 {
     int ret;
     vka_object_t object;
@@ -76,25 +83,119 @@ static vm_frame_t pd_alloc_iterator(uintptr_t addr, void *cookie)
     return frame_result;
 }
 
-
-static int make_guest_page_dir(vm_t *vm)
+static int make_guest_pd_continued(void *access_addr, void *vaddr, void *cookie)
 {
-    /* Create a 4K Page to be our 1-1 pd */
-    /* This is constructed with magical new memory that we will not tell Linux about */
-    vm_memory_reservation_t *pd_reservation = vm_reserve_memory_at(vm, GUEST_PAGE_DIR, BIT(seL4_PageBits),
-                                                                   default_error_fault_callback, NULL);
+    uint64_t *pd = vaddr;
+    int num_entries = BIT(seL4_PageBits) / sizeof(pd[0]);
+
+    /* Brute force 1:1 entries. */
+    for (int i = 0; i < num_entries; i++) {
+        /* Present, write, user, page size 2M */
+        pd[i] = (uint64_t)((uint64_t)((i) << PAGE_BITS_2M) | PAGE_ENTRY);
+    }
+
+    return 0;
+}
+
+static int make_guest_pdpt_continued(void *access_addr, void *vaddr, void *cookie)
+{
+    vm_t *vm = (vm_t *)cookie;
+
+    vm_memory_reservation_t *pd_reservation = vm_reserve_memory_at(vm, GUEST_VSPACE_PD,
+                                                                   BIT(seL4_PageBits),
+                                                                   default_error_fault_callback,
+                                                                   NULL);
+
     if (!pd_reservation) {
-        ZF_LOGE("Failed to reserve page for initial guest pd");
+        ZF_LOGE("Failed to reserve page for initial guest PD");
         return -1;
     }
-    int err = map_vm_memory_reservation(vm, pd_reservation, pd_alloc_iterator, (void *)vm);
+    int err = map_vm_memory_reservation(vm, pd_reservation, vspace_alloc_iterator, (void *)vm);
     if (err) {
-        ZF_LOGE("Failed to map page for initial guest pd");
+        ZF_LOGE("Failed to map page for initial guest PD");
     }
-    printf("Guest page dir allocated at 0x%x. Creating 1-1 entries\n", (unsigned int)GUEST_PAGE_DIR);
-    vm->arch.guest_pd = GUEST_PAGE_DIR;
-    return vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace, (void *)GUEST_PAGE_DIR,
-                                            seL4_PageBits, seL4_AllRights, 1, make_guest_page_dir_continued, NULL);
+
+    uint64_t *pdpt = vaddr;
+    pdpt[0] = (GUEST_VSPACE_PD & PAGE_MASK) | PAGE_REFERENCE;
+
+    return vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace,
+                                            (void *)GUEST_VSPACE_PD,
+                                            seL4_PageBits, seL4_AllRights, 1,
+                                            make_guest_pd_continued, NULL);
+}
+
+static int make_guest_root_pd_continued(void *access_addr, void *vaddr, void *cookie)
+{
+#ifdef CONFIG_ARCH_X86_64
+    assert(NULL != cookie);
+
+    vm_t *vm = (vm_t *)cookie;
+
+    vm_memory_reservation_t *pdpt_reservation = vm_reserve_memory_at(vm, GUEST_VSPACE_PDPT,
+                                                                     BIT(seL4_PageBits),
+                                                                     default_error_fault_callback,
+                                                                     NULL);
+
+    if (!pdpt_reservation) {
+        ZF_LOGE("Failed to reserve page for initial guest PDPT");
+        return -1;
+    }
+    int err = map_vm_memory_reservation(vm, pdpt_reservation, vspace_alloc_iterator, (void *)vm);
+    if (err) {
+        ZF_LOGE("Failed to map page for initial guest PDPT");
+        return -1;
+    }
+
+    uint64_t *pml4 = vaddr;
+    pml4[0] = (GUEST_VSPACE_PDPT & PAGE_MASK) | PAGE_REFERENCE;
+
+    int error = vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace,
+                                                 (void *)GUEST_VSPACE_PDPT,
+                                                 seL4_PageBits, seL4_AllRights, 1,
+                                                 make_guest_pdpt_continued, vm);
+    if (error) {
+        return error;
+    }
+#else
+    /* Write into this frame as the init page directory: 4M pages, 1 to 1 mapping. */
+    uint32_t *pd = vaddr;
+    for (int i = 0; i < 1024; i++) {
+        /* Present, write, user, page size 4M */
+        pd[i] = (i << PAGE_BITS_4M) | PAGE_ENTRY;
+    }
+#endif
+    return 0;
+}
+
+static int make_guest_address_space(vm_t *vm)
+{
+    /* Create a 4K Page to be our 1-1 vspace */
+    /* This is constructed with magical new memory that we will not tell Linux about */
+    vm_memory_reservation_t *vspace_reservation = vm_reserve_memory_at(vm, GUEST_VSPACE_ROOT,
+                                                                       BIT(seL4_PageBits),
+                                                                       default_error_fault_callback,
+                                                                       NULL);
+    if (!vspace_reservation) {
+        ZF_LOGE("Failed to reserve page for initial guest vspace");
+        return -1;
+    }
+    int err = map_vm_memory_reservation(vm, vspace_reservation, vspace_alloc_iterator, (void *)vm);
+    if (err) {
+        ZF_LOGE("Failed to map page for initial guest vspace");
+        return -1;
+    }
+    printf("Guest address space root allocated at 0x%x. Creating 1-1 entries\n", (unsigned int)GUEST_VSPACE_ROOT);
+    vm->arch.guest_pd = GUEST_VSPACE_ROOT;
+
+    void *cookie = NULL;
+
+#ifdef CONFIG_ARCH_X86_64
+    cookie = (void *) vm;
+#endif
+    return vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace,
+                                            (void *)GUEST_VSPACE_ROOT,
+                                            seL4_PageBits, seL4_AllRights, 1,
+                                            make_guest_root_pd_continued, cookie);
 }
 
 int vm_init_arch(vm_t *vm)
@@ -150,8 +251,8 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
         return -1;
     }
 
-    /* Create our 4K page 1-1 pd */
-    err = make_guest_page_dir(vm);
+    /* Create the guest root vspace */
+    err = make_guest_address_space(vm);
     if (err) {
         return -1;
     }
@@ -159,7 +260,12 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     vm_guest_state_initialise(vcpu->vcpu_arch.guest_state);
     /* Set the initial CR state */
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_mask = VM_VMCS_CR0_MASK;
+#ifdef CONFIG_ARCH_X86_64
+    /* In 64-bit mode, PG and PE always need to be enabled, otherwise a fault will occur. */
+    vcpu->vcpu_arch.guest_state->virt.cr.cr0_shadow = VM_VMCS_CR0_MASK;
+#else
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_shadow = 0;
+#endif
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_host_bits = VM_VMCS_CR0_VALUE;
     vcpu->vcpu_arch.guest_state->virt.cr.cr4_mask = VM_VMCS_CR4_MASK;
     vcpu->vcpu_arch.guest_state->virt.cr.cr4_shadow = 0;

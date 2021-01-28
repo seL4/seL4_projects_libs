@@ -18,7 +18,7 @@
 #define ACPI_START (LOWER_BIOS_START) // Start of ACPI tables; RSD PTR is right here
 #define XSDT_START (ACPI_START + 0x1000)
 
-#define MAX_ACPI_TABLES (2)
+#define MAX_ACPI_TABLES (16)
 
 #include <sel4vm/guest_vm.h>
 

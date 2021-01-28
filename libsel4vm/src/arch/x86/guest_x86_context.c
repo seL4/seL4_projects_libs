@@ -19,7 +19,7 @@ int vm_set_thread_context(vm_vcpu_t *vcpu, seL4_VCPUContext context)
     return 0;
 }
 
-int vm_set_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, uint32_t value)
+int vm_set_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, seL4_Word value)
 {
     MACHINE_STATE_DIRTY(vcpu->vcpu_arch.guest_state->machine.context);
     (&vcpu->vcpu_arch.guest_state->machine.context.eax)[reg] = value;
@@ -36,7 +36,7 @@ int vm_get_thread_context(vm_vcpu_t *vcpu, seL4_VCPUContext *context)
     return 0;
 }
 
-int vm_get_thread_context_reg(vm_vcpu_t *vcpu, unsigned int reg, uint32_t *value)
+int vm_get_thread_context_reg(vm_vcpu_t *vcpu, unsigned int reg, seL4_Word *value)
 {
     if (IS_MACHINE_STATE_UNKNOWN(vcpu->vcpu_arch.guest_state->machine.context)) {
         ZF_LOGE("Failed to get thread context register: Context is unsynchronised. The VCPU hasn't exited?");
@@ -46,7 +46,7 @@ int vm_get_thread_context_reg(vm_vcpu_t *vcpu, unsigned int reg, uint32_t *value
     return 0;
 }
 
-int vm_set_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t value)
+int vm_set_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, seL4_Word value)
 {
     int err = 0;
     switch (field) {
@@ -93,10 +93,10 @@ int vm_set_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t value)
     return err;
 }
 
-int vm_get_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t *value)
+int vm_get_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, seL4_Word *value)
 {
     int err = 0;
-    uint32_t val;
+    seL4_Word val;
     switch (field) {
     case VMX_GUEST_CR0:
         val = vm_guest_state_get_cr0(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
@@ -142,7 +142,7 @@ int vm_get_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t *value)
     return err;
 }
 
-int vm_vmcs_read(seL4_CPtr vcpu, seL4_Word field, unsigned int *value)
+int vm_vmcs_read(seL4_CPtr vcpu, seL4_Word field, seL4_Word *value)
 {
 
     seL4_X86_VCPU_ReadVMCS_t UNUSED result;
