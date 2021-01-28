@@ -23,7 +23,17 @@ typedef enum vcpu_context_reg {
     VCPU_CONTEXT_EDX,
     VCPU_CONTEXT_ESI,
     VCPU_CONTEXT_EDI,
-    VCPU_CONTEXT_EBP
+    VCPU_CONTEXT_EBP,
+#ifdef CONFIG_ARCH_X86_64
+    VCPU_CONTEXT_R8,
+    VCPU_CONTEXT_R9,
+    VCPU_CONTEXT_R10,
+    VCPU_CONTEXT_R11,
+    VCPU_CONTEXT_R12,
+    VCPU_CONTEXT_R13,
+    VCPU_CONTEXT_R14,
+    VCPU_CONTEXT_R15
+#endif
 } vcpu_context_reg_t;
 
 /***
@@ -40,10 +50,10 @@ int vm_set_thread_context(vm_vcpu_t *vcpu, seL4_VCPUContext context);
  * Set a single VCPU's thread register in a seL4_VCPUContext
  * @param {vm_vcpu_t *} vcpu            Handle to the vcpu
  * @param {vcpu_context_reg_t} reg      Register enumerated by vcpu_context_reg
- * @param {uint32_t} value              Value to set register with
+ * @param {seL4_Word} value             Value to set register with
  * @return                              0 on success, otherwise -1 for error
  */
-int vm_set_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, uint32_t value);
+int vm_set_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, seL4_Word value);
 
 /***
  * @function vm_get_thread_context(vcpu, context)
@@ -59,10 +69,10 @@ int vm_get_thread_context(vm_vcpu_t *vcpu, seL4_VCPUContext *context);
  * Get a single VCPU's thread register
  * @param {vm_vcpu_t *} vcpu            Handle to the vcpu
  * @param {vcpu_context_reg_t} reg      Register enumerated by vcpu_context_reg
- * @param {uint32_t *} value            Pointer to user supplied variable to populate register value with
+ * @param {seL4_Word *} value           Pointer to user supplied variable to populate register value with
  * @return                              0 on success, otherwise -1 for error
  */
-int vm_get_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, uint32_t *value);
+int vm_get_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, seL4_Word *value);
 
 /* VMCS Getters and Setters */
 
@@ -74,7 +84,7 @@ int vm_get_thread_context_reg(vm_vcpu_t *vcpu, vcpu_context_reg_t reg, uint32_t 
  * @param {uint32_t} value          Value to set VMCS field with
  * @return                          0 on success, otherwise -1 for error
  */
-int vm_set_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t value);
+int vm_set_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, seL4_Word value);
 
 /***
  * @function vm_get_vmcs_field(vcpu, field, value)
@@ -84,4 +94,4 @@ int vm_set_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t value);
  * @param {uint32_t *} value        Pointer to user supplied variable to populate VMCS field value with
  * @return                          0 on success, otherwise -1 for error
  */
-int vm_get_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, uint32_t *value);
+int vm_get_vmcs_field(vm_vcpu_t *vcpu, seL4_Word field, seL4_Word *value);

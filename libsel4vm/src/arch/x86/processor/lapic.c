@@ -796,7 +796,7 @@ static int apic_reg_write(vm_vcpu_t *vcpu, uint32_t reg, uint32_t val)
 }
 
 void vm_apic_mmio_write(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
-                        int len, const uint32_t data)
+                        int len, const seL4_Word data)
 {
     (void)cookie;
 
@@ -855,7 +855,7 @@ static int apic_reg_read(vm_lapic_t *apic, uint32_t offset, int len,
 }
 
 void vm_apic_mmio_read(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
-                       int len, uint32_t *data)
+                       int len, seL4_Word *data)
 {
     vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
     (void)cookie;
@@ -870,7 +870,7 @@ void vm_apic_mmio_read(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
 memory_fault_result_t apic_fault_callback(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t fault_addr, size_t fault_length,
                                           void *cookie)
 {
-    uint32_t data;
+    seL4_Word data;
     if (is_vcpu_read_fault(vcpu)) {
         vm_apic_mmio_read(vcpu, cookie, APIC_DEFAULT_PHYS_BASE - fault_addr, fault_length, &data);
         set_vcpu_fault_data(vcpu, data);

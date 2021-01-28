@@ -24,11 +24,11 @@ seL4_Word get_vcpu_fault_ip(vm_vcpu_t *vcpu)
 seL4_Word get_vcpu_fault_data(vm_vcpu_t *vcpu)
 {
     int reg;
-    uint32_t imm;
+    seL4_Word imm;
     int size;
     vm_decode_ept_violation(vcpu, &reg, &imm, &size);
     int vcpu_reg = vm_decoder_reg_mapw[reg];
-    unsigned int data;
+    seL4_Word data;
     vm_get_thread_context_reg(vcpu, vcpu_reg, &data);
     return data;
 }
@@ -36,7 +36,7 @@ seL4_Word get_vcpu_fault_data(vm_vcpu_t *vcpu)
 size_t get_vcpu_fault_size(vm_vcpu_t *vcpu)
 {
     int reg;
-    uint32_t imm;
+    seL4_Word imm;
     int size;
     vm_decode_ept_violation(vcpu, &reg, &imm, &size);
     return size;
@@ -74,7 +74,7 @@ bool is_vcpu_read_fault(vm_vcpu_t *vcpu)
 int set_vcpu_fault_data(vm_vcpu_t *vcpu, seL4_Word data)
 {
     int reg;
-    uint32_t imm;
+    seL4_Word imm;
     int size;
     vm_decode_ept_violation(vcpu, &reg, &imm, &size);
     int vcpu_reg = vm_decoder_reg_mapw[reg];

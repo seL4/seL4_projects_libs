@@ -19,6 +19,15 @@
 #include <sel4vm/guest_memory.h>
 #include <sel4vm/guest_ram.h>
 
+#ifdef CONFIG_ARCH_X86_64
+#define ELF_HEADER_SIZE 512
+#else
+#define ELF_HEADER_SIZE 256
+#endif
+
+#define ISELF32(elfFile) ( ((Elf32_Ehdr *)elfFile)->e_ident[EI_CLASS] == ELFCLASS32 )
+#define ISELF64(elfFile) ( ((Elf64_Ehdr *)elfFile)->e_ident[EI_CLASS] == ELFCLASS64 )
+
 typedef struct boot_guest_cookie {
     vm_t *vm;
     FILE *file;
@@ -30,7 +39,7 @@ typedef struct boot_guest_cookie {
 static int read_elf_headers(void *buf, vm_t *vm, FILE *file, size_t buf_size, elf_t *elf)
 {
     size_t result;
-    if (buf_size < sizeof(Elf32_Ehdr)) {
+    if (buf_size < ELF_HEADER_SIZE) {
         return -1;
     }
     fseek(file, 0, SEEK_SET);
@@ -38,6 +47,17 @@ static int read_elf_headers(void *buf, vm_t *vm, FILE *file, size_t buf_size, el
     if (result != 1) {
         return -1;
     }
+
+    /* Check for correct ELF version on the current architecture */
+#ifdef CONFIG_ARCH_X86_64
+    if (ISELF32(buf)) {
+        return -1;
+    }
+#else
+    if (ISELF64(buf)) {
+        return -1;
+    }
+#endif
 
     return elf_newFile_maybe_unsafe(buf, buf_size, true, false, elf);
 }
@@ -220,7 +240,7 @@ static int load_guest_elf(vm_t *vm, const char *image_name, uintptr_t load_addre
                           guest_kernel_image_t *guest_image)
 {
     elf_t kernel_elf;
-    char elf_file[256];
+    char elf_file[ELF_HEADER_SIZE];
     int ret;
     FILE *file = fopen(image_name, "r");
     if (!file) {
@@ -240,18 +260,18 @@ static int load_guest_elf(vm_t *vm, const char *image_name, uintptr_t load_addre
      * if it isn't we will just fail when we try and get the frame */
     uintptr_t load_addr = ROUND_UP(load_address, alignment);
     /* Calculate relocation offset. */
-    uintptr_t guest_kernel_addr = 0xFFFFFFFF;
-    uintptr_t guest_kernel_vaddr = 0xFFFFFFFF;
+    uintptr_t guest_kernel_addr = UINTPTR_MAX;
+    uintptr_t guest_kernel_vaddr = UINTPTR_MAX;
     for (int i = 0; i < n_headers; i++) {
         if (elf_getProgramHeaderType(&kernel_elf, i) != PT_LOAD) {
             continue;
         }
-        uint32_t addr = elf_getProgramHeaderPaddr(&kernel_elf, i);
+        seL4_Word addr = elf_getProgramHeaderPaddr(&kernel_elf, i);
         if (addr < guest_kernel_addr) {
             guest_kernel_addr = addr;
         }
-        uint32_t vaddr = elf_getProgramHeaderVaddr(&kernel_elf, i);
-        if (vaddr < guest_kernel_vaddr) {
+        seL4_Word vaddr = elf_getProgramHeaderVaddr(&kernel_elf, i);
+        if (vaddr && (vaddr < guest_kernel_vaddr)) {
             guest_kernel_vaddr = vaddr;
         }
     }

@@ -51,7 +51,7 @@ static vm_ioport_entry_t *search_port(vm_io_port_list_t *ioports, unsigned int p
 
 static void set_io_in_unhandled(vm_vcpu_t *vcpu, unsigned int size)
 {
-    uint32_t eax;
+    seL4_Word eax;
     if (size < 4) {
         vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, &eax);
         eax |= MASK(size * 8);
@@ -63,7 +63,7 @@ static void set_io_in_unhandled(vm_vcpu_t *vcpu, unsigned int size)
 
 static void set_io_in_value(vm_vcpu_t *vcpu, unsigned int value, unsigned int size)
 {
-    uint32_t eax;
+    seL4_Word eax;
     if (size < 4) {
         vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, &eax);
         eax &= ~MASK(size * 8);
@@ -124,12 +124,13 @@ int vm_enable_passthrough_ioport(vm_vcpu_t *vcpu, uint16_t port_start, uint16_t 
 int vm_io_instruction_handler(vm_vcpu_t *vcpu)
 {
 
-    unsigned int exit_qualification = vm_guest_exit_get_qualification(vcpu->vcpu_arch.guest_state);
+    seL4_Word exit_qualification = vm_guest_exit_get_qualification(vcpu->vcpu_arch.guest_state);
     unsigned int string, rep;
     int ret;
     unsigned int port_no;
     unsigned int size;
-    unsigned int value;
+    unsigned int port_value;
+    seL4_Word eax_value;
     int is_in;
     ioport_fault_result_t res;
 
@@ -146,25 +147,26 @@ int vm_io_instruction_handler(vm_vcpu_t *vcpu)
     }
 
     if (!is_in) {
-        ret = vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, &value);
+        ret = vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, &eax_value);
         if (ret) {
             return VM_EXIT_HANDLE_ERROR;
         }
         if (size < 4) {
-            value &= MASK(size * 8);
+            eax_value &= MASK(size * 8);
         }
+        port_value = eax_value;
     }
 
     /* Search internal ioport list */
     vm_ioport_entry_t *port = search_port(&vcpu->vm->arch.ioport_list, port_no);
     if (port) {
         if (is_in) {
-            res = port->interface.port_in(vcpu, port->interface.cookie, port_no, size, &value);
+            res = port->interface.port_in(vcpu, port->interface.cookie, port_no, size, &port_value);
         } else {
-            res = port->interface.port_out(vcpu, port->interface.cookie, port_no, size, value);
+            res = port->interface.port_out(vcpu, port->interface.cookie, port_no, size, port_value);
         }
     } else if (vcpu->vm->arch.unhandled_ioport_callback) {
-        res = vcpu->vm->arch.unhandled_ioport_callback(vcpu, port_no, is_in, &value, size,
+        res = vcpu->vm->arch.unhandled_ioport_callback(vcpu, port_no, is_in, &port_value, size,
                                                        vcpu->vm->arch.unhandled_ioport_callback_cookie);
     } else {
         /* No means of handling ioport instruction */
@@ -182,7 +184,7 @@ int vm_io_instruction_handler(vm_vcpu_t *vcpu)
         if (res == IO_FAULT_UNHANDLED) {
             set_io_in_unhandled(vcpu, size);
         } else {
-            set_io_in_value(vcpu, value, size);
+            set_io_in_value(vcpu, port_value, size);
         }
     }
 

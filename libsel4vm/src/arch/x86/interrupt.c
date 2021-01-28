@@ -47,7 +47,8 @@ void vm_inject_exception(vm_vcpu_t *vcpu, int exception, int has_error, uint32_t
         ZF_LOGF("Cannot inject exception");
     }
     if (has_error) {
-        vm_guest_state_set_entry_exception_error_code(vcpu->vcpu_arch.guest_state, error_code);
+        seL4_Word code_to_set = error_code;
+        vm_guest_state_set_entry_exception_error_code(vcpu->vcpu_arch.guest_state, code_to_set);
     }
     vm_guest_state_set_control_entry(vcpu->vcpu_arch.guest_state, BIT(31) | exception | 3 << 8 | (has_error ? BIT(11) : 0));
 }
@@ -137,7 +138,18 @@ void vm_start_ap_vcpu(vm_vcpu_t *vcpu, unsigned int sipi_vector)
                          TRAMPOLINE_LENGTH, instr);
 
     eip = vm_emulate_realmode(vcpu, instr, &segment, eip,
-                              TRAMPOLINE_LENGTH, gs);
+                              TRAMPOLINE_LENGTH, gs, 0);
+
+#ifdef CONFIG_ARCH_X86_64
+    /* 64-bit guests go from realmode to 32-bit emulation mode to longmode */
+    memset(instr, 0, TRAMPOLINE_LENGTH);
+
+    vm_fetch_instruction(vcpu, eip, vm_guest_state_get_cr3(gs, vcpu->vcpu.cptr),
+                         TRAMPOLINE_LENGTH, instr);
+
+    eip = vm_emulate_realmode(vcpu, instr, &segment, eip,
+                              TRAMPOLINE_LENGTH, gs, 1);
+#endif
 
     vm_guest_state_set_eip(vcpu->vcpu_arch.guest_state, eip);
 

@@ -284,3 +284,13 @@
 
 #define MSR_IA32_TSC_DEADLINE       0x000006E0
 
+/* x86-64 specific MSRs */
+#define MSR_EFER            0xc0000080 /* extended feature register */
+#define MSR_STAR            0xc0000081 /* legacy mode SYSCALL target */
+#define MSR_LSTAR           0xc0000082 /* long mode SYSCALL target */
+#define MSR_CSTAR           0xc0000083 /* compat mode SYSCALL target */
+#define MSR_SYSCALL_MASK    0xc0000084 /* EFLAGS mask for syscall */
+#define MSR_FS_BASE         0xc0000100 /* 64bit FS base */
+#define MSR_GS_BASE         0xc0000101 /* 64bit GS base */
+#define MSR_SHADOW_GS_BASE  0xc0000102 /* SwapGS GS shadow */
+#define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
