@@ -60,6 +60,7 @@ target_link_libraries(
     sel4vm
     fdt
     fdtgen
+    satadrivers
     sel4_autoconf
     sel4vm_Config
     usbdrivers_Config
