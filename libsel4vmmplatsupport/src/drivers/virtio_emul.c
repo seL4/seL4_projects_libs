@@ -123,6 +123,9 @@ virtio_emul_t *virtio_emul_init(ps_io_ops_t io_ops, int queue_size, vm_t *vm, vo
     case VIRTIO_NET:
         emul->internal = net_virtio_emul_init(emul, io_ops, (ethif_driver_init)driver, config);
         break;
+    case VIRTIO_BLOCK:
+        emul->internal = block_virtio_emul_init(emul, io_ops, (diskif_driver_init)driver, config);
+        break;
     }
     if (emul->internal == NULL) {
         return NULL;
@@ -132,7 +135,7 @@ virtio_emul_t *virtio_emul_init(ps_io_ops_t io_ops, int queue_size, vm_t *vm, vo
     emul->virtq.queue_size[TX_QUEUE] = queue_size;
     /* create dummy rings. we never actually dereference the rings so they can be null */
     vring_init(&emul->virtq.vring[RX_QUEUE], emul->virtq.queue_size[RX_QUEUE], 0, VIRTIO_PCI_VRING_ALIGN);
-    vring_init(&emul->virtq.vring[TX_QUEUE], emul->virtq.queue_size[RX_QUEUE], 0, VIRTIO_PCI_VRING_ALIGN);
+    vring_init(&emul->virtq.vring[TX_QUEUE], emul->virtq.queue_size[TX_QUEUE], 0, VIRTIO_PCI_VRING_ALIGN);
     emul->io_in = emul_io_in;
     emul->io_out = emul_io_out;
 

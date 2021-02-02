@@ -16,12 +16,15 @@
 
 /* Virtio device IDs  */
 #define VIRTIO_NET_PCI_DEVICE_ID        0x1000
+#define VIRTIO_BLOCK_PCI_DEVICE_ID      0x1001
 #define VIRTIO_CONSOLE_PCI_DEVICE_ID    0x1003
 
 /* Virtio subsystem device ids */
 #define VIRTIO_ID_NET                   1
+#define VIRTIO_ID_BLOCK                 2
 #define VIRTIO_ID_CONSOLE               3
 
 /* Virtio PCI device classes  */
 #define VIRTIO_PCI_CLASS_NET            0x020000
+#define VIRTIO_PCI_CLASS_BLOCK          0x010000
 #define VIRTIO_PCI_CLASS_CONSOLE        0x078000
