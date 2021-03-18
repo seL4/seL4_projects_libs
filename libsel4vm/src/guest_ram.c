@@ -257,7 +257,7 @@ static vm_frame_t ram_alloc_iterator(uintptr_t addr, void *cookie)
     uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
     ret = vka_alloc_frame_maybe_device(vm->vka, page_size, true, &object);
     if (ret) {
-        ZF_LOGE("Failed to allocate frame for address 0x%x", addr);
+        ZF_LOGE("Failed to allocate frame for address 0x%lx", addr);
         return frame_result;
     }
     frame_result.cptr = object.cptr;
@@ -326,7 +326,7 @@ uintptr_t vm_ram_register(vm_t *vm, size_t bytes)
 
     ram_reservation = vm_reserve_anon_memory(vm, bytes, 0x1000, default_ram_fault_callback, NULL, &base_addr);
     if (!ram_reservation) {
-        ZF_LOGE("Unable to reserve ram region of size 0x%x", bytes);
+        ZF_LOGE("Unable to reserve ram region of size 0x%lx", bytes);
         return 0;
     }
     err = map_ram_reservation(vm, ram_reservation, false);
@@ -352,7 +352,7 @@ int vm_ram_register_at(vm_t *vm, uintptr_t start, size_t bytes, bool untyped)
     ram_reservation = vm_reserve_memory_at(vm, start, bytes, default_ram_fault_callback,
                                            NULL);
     if (!ram_reservation) {
-        ZF_LOGE("Unable to reserve ram region at addr 0x%x of size 0x%x", start, bytes);
+        ZF_LOGE("Unable to reserve ram region at addr 0x%lx of size 0x%lx", start, bytes);
         return 0;
     }
     err = map_ram_reservation(vm, ram_reservation, untyped);
@@ -378,7 +378,7 @@ int vm_ram_register_at_custom_iterator(vm_t *vm, uintptr_t start, size_t bytes, 
     ram_reservation = vm_reserve_memory_at(vm, start, bytes, default_ram_fault_callback,
                                            NULL);
     if (!ram_reservation) {
-        ZF_LOGE("Unable to reserve ram region at addr 0x%x of size 0x%x", start, bytes);
+        ZF_LOGE("Unable to reserve ram region at addr 0x%lx of size 0x%lx", start, bytes);
         return -1;
     }
     err = map_vm_memory_reservation(vm, ram_reservation, map_iterator, cookie);

@@ -33,7 +33,7 @@ void vm_print_guest_context(vm_vcpu_t *vcpu)
 
     printf("================== GUEST OS CONTEXT =================\n");
 
-    printf("exit info : reason 0x%lx    qualification 0x%lx   instruction len 0x%lx interrupt info 0x%lx interrupt error 0x%x\n",
+    printf("exit info : reason 0x%lx    qualification 0x%lx   instruction len 0x%lx interrupt info 0x%lx interrupt error 0x%lx\n",
            vm_guest_exit_get_reason(vcpu->vcpu_arch.guest_state),
            vm_guest_exit_get_qualification(vcpu->vcpu_arch.guest_state),
            vm_guest_exit_get_int_len(vcpu->vcpu_arch.guest_state), data_exit_info, data_exit_error);

@@ -325,7 +325,7 @@ vm_memory_reservation_t *vm_reserve_memory_at(vm_t *vm, uintptr_t addr, size_t s
     reservation_t vspace_reservation = vspace_reserve_deferred_rights_range_at(&vm->mem.vm_vspace, (void *)addr,
                                                                                size, 1);
     if (!vspace_reservation.res) {
-        ZF_LOGE("Failed to allocate vm reservation: Unable to create vspace reservation at address 0x%x of size %zu",
+        ZF_LOGE("Failed to allocate vm reservation: Unable to create vspace reservation at address 0x%lx of size %zu",
                 addr, size);
         return NULL;
     }
@@ -474,7 +474,7 @@ int map_vm_memory_reservation(vm_t *vm, vm_memory_reservation_t *vm_reservation,
                                                             (void *)reservation_frame.vaddr, 1, reservation_frame.size_bits,
                                                             reservation_frame.rights, vm_reservation->vspace_reservation);
         if (ret) {
-            ZF_LOGE("Failed to map address 0x%x into guest vm vspace", reservation_frame.vaddr);
+            ZF_LOGE("Failed to map address 0x%lx into guest vm vspace", reservation_frame.vaddr);
             return -1;
         }
         current_addr += BIT(reservation_frame.size_bits);

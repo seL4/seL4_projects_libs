@@ -813,7 +813,7 @@ void vm_apic_mmio_write(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
     /* too common printing */
     if (offset != APIC_EOI)
         apic_debug(6, "lapic mmio write at %s: offset 0x%x with length 0x%x, and value is "
-                   "0x%x\n", __func__, offset, len, data);
+                   "0x%lx\n", __func__, offset, len, data);
 
     apic_reg_write(vcpu, offset & 0xff0, data);
 }
@@ -862,7 +862,7 @@ void vm_apic_mmio_read(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
 
     apic_reg_read(apic, offset, len, data);
 
-    apic_debug(6, "lapic mmio read on vcpu %d, reg %08x = %08x\n", vcpu->vcpu_id, offset, *data);
+    apic_debug(6, "lapic mmio read on vcpu %d, reg %08x = %lx\n", vcpu->vcpu_id, offset, *data);
 
     return;
 }

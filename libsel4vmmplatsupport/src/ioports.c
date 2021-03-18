@@ -80,7 +80,7 @@ int emulate_io_handler(vmm_io_port_list_t *io_port, unsigned int port_no, bool i
 
     if (ret) {
         ZF_LOGE("exit io request: handler returned error.");
-        ZF_LOGE("exit io ERROR: string %d  in %d rep %d  port no 0x%x (%s) size %d", 0,
+        ZF_LOGE("exit io ERROR: string %d  in %d rep %d  port no 0x%x (%s) size %zu", 0,
                 is_in, 0, port_no, vmm_debug_io_portno_desc(io_port, port_no), size);
         return -1;
     }
