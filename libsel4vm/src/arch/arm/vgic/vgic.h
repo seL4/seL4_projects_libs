@@ -10,6 +10,8 @@
  * @TAG(DATA61_BSD)
  */
 
+#pragma once
+
 #include <sel4vm/guest_vm.h>
 
 struct vgic_dist_device {
@@ -18,7 +20,7 @@ struct vgic_dist_device {
     void *priv;
 };
 
-const struct vgic_dist_device dev_vgic_dist;
+extern const struct vgic_dist_device dev_vgic_dist;
 
 int vm_install_vgic(vm_t *vm);
 int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu);

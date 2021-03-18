@@ -88,6 +88,8 @@
 #define GIC_PADDR   0x8000000
 #elif defined(CONFIG_PLAT_ODROIDC2)
 #define GIC_PADDR   0xc4300000
+#elif defined(CONFIG_PLAT_RK3288)
+#define GIC_PADDR   0xffc00000
 #else
 #error "Unsupported platform for GIC"
 #endif
