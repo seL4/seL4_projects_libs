@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+/* Under release mode, this file will get built using -O3. Howerver on gcc 8.4,
+ * the -O3 optimisation level is too aggressive and causes issues for the guest
+ * VM. Hence, instead of using -O3 we use -O2 to avoid the issue. */
+#ifdef NDEBUG
+#pragma GCC optimize ("O2")
+#endif
+
 #include <sel4/sel4.h>
 
 #include <sel4vm/guest_vm.h>
