@@ -257,16 +257,19 @@ int make_guest_acpi_tables(vm_t *vm)
     }
 
     uintptr_t xsdt_addr = lower_bios_addr + (XSDT_START - LOWER_BIOS_START);
+    uintptr_t xsdt_vaddr = XSDT_START;
 
     acpi_xsdt_t *xsdt = calloc(1, xsdt_size);
     acpi_fill_table_head(&xsdt->header, "XSDT", 1);
 
     // Add previous tables to XSDT pointer list
     uintptr_t table_paddr = xsdt_addr + xsdt_size;
+    uintptr_t table_vaddr = xsdt_vaddr + xsdt_size;
     uint64_t *entry = (uint64_t *)((char *)xsdt + sizeof(acpi_xsdt_t));
     for (int i = 1; i < num_tables; i++) {
-        *entry++ = (uint64_t)table_paddr;
+        *entry++ = (uint64_t)table_vaddr;
         table_paddr += table_sizes[i];
+        table_vaddr += table_sizes[i];
     }
 
     xsdt->header.length = xsdt_size;
@@ -277,19 +280,21 @@ int make_guest_acpi_tables(vm_t *vm)
 
     // Copy all the tables to guest
     table_paddr = xsdt_addr;
+    table_vaddr = xsdt_vaddr;
     for (int i = 0; i < num_tables; i++) {
 
         // Need to fill in DSDT address
         if (i == fadt_index) {
-            fadt->dsdt_address = table_paddr - table_sizes[dsdt_index];
-            fadt->x_dsdt_address = table_paddr - table_sizes[dsdt_index];
+            fadt->dsdt_address = table_vaddr - table_sizes[dsdt_index];
+            fadt->x_dsdt_address = table_vaddr - table_sizes[dsdt_index];
             fadt->header.checksum = acpi_calc_checksum((char *)fadt, fadt_size);
         }
 
         ZF_LOGD("ACPI table \"%.4s\", addr = %p, size = %zu bytes\n",
-                (char *)tables[i], (void *)table_paddr, table_sizes[i]);
+                (char *)tables[i], (void *)table_vaddr, table_sizes[i]);
         memcpy((void *)table_paddr, (char *)tables[i], table_sizes[i]);
         table_paddr += table_sizes[i];
+        table_vaddr += table_sizes[i];
     }
 
     // RSDP
@@ -299,11 +304,11 @@ int make_guest_acpi_tables(vm_t *vm)
         .oem_id = "NICTA ",
         .revision = 2, /* ACPI v3*/
         .checksum = 0,
-        .rsdt_address = xsdt_addr,
+        .rsdt_address = xsdt_vaddr,
         /* rsdt_addrss will not be inspected as the xsdt is present.
            This is not ACPI 1 compliant */
         .length = sizeof(acpi_rsdp_t),
-        .xsdt_address = xsdt_addr,
+        .xsdt_address = xsdt_vaddr,
         .extended_checksum = 0,
         .reserved = {0}
     };
