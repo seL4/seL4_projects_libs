@@ -611,6 +611,10 @@ static int vgic_dist_set_pending_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu
     virq_data = virq_find_irq_data(vgic, vcpu, irq);
     /* If it is enabled, inject the IRQ */
     if (virq_data && gic_dist->enable && is_enabled(gic_dist, irq, vcpu->vcpu_id)) {
+        if (is_pending(gic_dist, virq_data->virq, vcpu->vcpu_id)) {
+            return 0;
+        }
+
         int err;
         DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
 
