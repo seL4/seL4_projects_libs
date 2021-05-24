@@ -24,7 +24,8 @@ enum fault_width {
     WIDTH_DOUBLEWORD,
     WIDTH_WORD,
     WIDTH_HALFWORD,
-    WIDTH_BYTE
+    WIDTH_BYTE,
+    WIDTH_INVALID
 };
 
 typedef enum {
