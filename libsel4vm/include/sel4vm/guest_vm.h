@@ -77,6 +77,8 @@ struct vm_ram_region {
  * @param {vm_memory_reservation_cookie_t *}                                Initialised instance of vm memory interface
  * @param {unhandled_mem_fault_callback_fn}  unhandled_mem_fault_handler    Registered callback for unhandled memory faults
  * @param {void *} unhandled_mem_fault_cookie                               User data passed onto unhandled mem fault callback
+ * @param {int} clean_cache                                                 Flag to clean cache when loading images
+ * @param {int} map_one_to_one                                              Flag to tell VMM to map memory 1:1
  */
 struct vm_mem {
     /* Guest vm vspace management */
@@ -94,6 +96,8 @@ struct vm_mem {
     vm_memory_reservation_cookie_t *reservation_cookie;
     unhandled_mem_fault_callback_fn unhandled_mem_fault_handler;
     void *unhandled_mem_fault_cookie;
+    int clean_cache;
+    int map_one_to_one;
 };
 
 /***
@@ -177,6 +181,7 @@ struct vm_cspace {
  * @param {vka_t *} vka                 Handle to virtual kernel allocator for seL4 kernel object allocation
  * @param {ps_io_ops_t *} io_ops        Handle to platforms io ops
  * @param {simple_t *} simple           Handle to hosts simple environment
+ * @param {seL4_Word} entry             Entry address for the loaded kernel
  * @param {char *} vm_name              String used to describe VM. Useful for debugging
  * @param {unsigned int} vm_id          Identifier for VM. Useful for debugging
  * @param {bool} vm_initialised         Boolean flagging whether VM is intialised or not
@@ -199,6 +204,10 @@ struct vm {
     vka_t *vka;
     ps_io_ops_t *io_ops;
     simple_t *simple;
+
+    /* vm entry address */
+    seL4_Word entry;
+
     /* Debugging & Identification */
     char *vm_name;
     unsigned int vm_id;

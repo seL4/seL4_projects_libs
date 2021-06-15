@@ -143,7 +143,7 @@ static int guest_write_address(vm_t *vm, uintptr_t paddr, void *vaddr, size_t si
         return -1;
     }
 
-    if (config_set(CONFIG_PLAT_TX1) || config_set(CONFIG_PLAT_TX2)) {
+    if (vm->mem.clean_cache) {
         seL4_CPtr cap = vspace_get_cap(&vm->mem.vmm_vspace, vaddr);
         if (cap == seL4_CapNull) {
             /* Not sure how we would get here, something has gone pretty wrong */
@@ -202,13 +202,7 @@ static void *load_guest_kernel_image(vm_t *vm, const char *kernel_image_name, ui
     /* Determine the load address */
     switch (ret_file_type) {
     case IMG_BIN:
-        if (config_set(CONFIG_PLAT_TX1) || config_set(CONFIG_PLAT_TX2) || config_set(CONFIG_PLAT_QEMU_ARM_VIRT)
-            || config_set(CONFIG_PLAT_ODROIDC2) || config_set(CONFIG_PLAT_ZYNQMP)) {
-            /* This is likely an aarch64/aarch32 linux difference */
-            load_addr = load_base_addr + 0x80000;
-        } else {
-            load_addr = load_base_addr + 0x8000;
-        }
+        load_addr = vm->entry;
         break;
     case IMG_ZIMAGE:
         load_addr = zImage_get_load_address(&header, load_base_addr);
