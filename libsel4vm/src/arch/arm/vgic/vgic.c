@@ -38,7 +38,6 @@ int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
     int idx;
     int err;
 
-    printf("plop\n");
     idx = seL4_GetMR(seL4_UnknownSyscall_ARG0);
     /* Currently not handling spurious IRQs */
     assert(idx >= 0);

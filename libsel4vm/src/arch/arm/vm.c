@@ -238,9 +238,9 @@ int vm_run_arch(vm_t *vm)
         seL4_Word label;
         int vm_exit_reason;
 
-        // printf("Waiting recv\n");
+        printf("Waiting recv\n");
         tag = seL4_Recv(vm->host_endpoint, &sender_badge);
-        // printf("Ok\n");
+        printf("Ok\n");
         label = seL4_MessageInfo_get_label(tag);
         if (sender_badge >= MIN_VCPU_BADGE && sender_badge <= MAX_VCPU_BADGE) {
             seL4_Word vcpu_idx = VCPU_BADGE_IDX(sender_badge);
