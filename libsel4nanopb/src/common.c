@@ -12,14 +12,14 @@
 
 pb_ostream_t pb_ostream_from_IPC(seL4_Word offset)
 {
-    char *msg_buffer = (char *) & (seL4_GetIPCBuffer()->msg[offset]);
+    pb_byte_t *msg_buffer = (pb_byte_t *) & (seL4_GetIPCBuffer()->msg[offset]);
     size_t size = seL4_MsgMaxLength * sizeof(seL4_Word) - offset;
     return pb_ostream_from_buffer(msg_buffer, size);
 }
 
 pb_istream_t pb_istream_from_IPC(seL4_Word offset)
 {
-    char *msg_buffer = (char *) & (seL4_GetIPCBuffer()->msg[offset]);
+    pb_byte_t *msg_buffer = (pb_byte_t *) & (seL4_GetIPCBuffer()->msg[offset]);
     size_t size = seL4_MsgMaxLength * sizeof(seL4_Word) - offset;
     return pb_istream_from_buffer(msg_buffer, size);
 }

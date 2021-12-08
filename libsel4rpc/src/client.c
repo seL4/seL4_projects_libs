@@ -19,6 +19,7 @@ int sel4rpc_client_init(sel4rpc_client_t *client, seL4_CPtr server_ep, seL4_Word
 {
     client->server_ep = server_ep;
     client->magic = magic;
+    return 0;
 }
 
 int sel4rpc_call(sel4rpc_client_t *client, RpcMessage *msg, seL4_CPtr root,
