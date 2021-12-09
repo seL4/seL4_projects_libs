@@ -20,8 +20,13 @@
 
 static int curr_vcpu_index = 0;
 
+#ifdef CONFIG_KERNEL_MCS
+int vm_init(vm_t *vm, vka_t *vka, simple_t *host_simple, vspace_t host_vspace,
+            ps_io_ops_t *io_ops, seL4_CPtr host_endpoint, seL4_CPtr host_reply, const char *name)
+#else
 int vm_init(vm_t *vm, vka_t *vka, simple_t *host_simple, vspace_t host_vspace,
             ps_io_ops_t *io_ops, seL4_CPtr host_endpoint, const char *name)
+#endif
 {
     int err;
     bzero(vm, sizeof(vm_t));
@@ -31,6 +36,9 @@ int vm_init(vm_t *vm, vka_t *vka, simple_t *host_simple, vspace_t host_vspace,
     vm->io_ops = io_ops;
     vm->mem.vmm_vspace = host_vspace;
     vm->host_endpoint = host_endpoint;
+#ifdef CONFIG_KERNEL_MCS
+    vm->host_reply= host_reply;
+#endif
     vm->vm_name = strndup(name, strlen(name));
     vm->run.exit_reason = VM_GUEST_UNKNOWN_EXIT;
     /* Initialise ram region */
@@ -65,6 +73,7 @@ vm_vcpu_t *vm_create_vcpu(vm_t *vm, int priority)
     }
     vm_vcpu_t *vcpu_new = calloc(1, sizeof(vm_vcpu_t));
     assert(vcpu_new);
+    memset(vcpu_new, 0, sizeof(vm_vcpu_t));
     /* Create VCPU */
     err = vka_alloc_vcpu(vm->vka, &vcpu_new->vcpu);
     assert(!err);
@@ -74,6 +83,7 @@ vm_vcpu_t *vm_create_vcpu(vm_t *vm, int priority)
     vcpu_new->tcb.priority = priority;
     vcpu_new->vcpu_online = false;
     vcpu_new->target_cpu = -1;
+    vcpu_new->tcb.sched_ctrl.cptr = 41;
     err = vm_create_vcpu_arch(vm, vcpu_new);
     assert(!err);
     vm->vcpus[vm->num_vcpus] = vcpu_new;

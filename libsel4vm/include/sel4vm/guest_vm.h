@@ -195,6 +195,9 @@ struct vm {
     struct vm_cspace cspace;
     /* Host endoint (i.e. vmm) to wait for VM faults and host events */
     seL4_CPtr host_endpoint;
+#ifdef CONFIG_KERNEL_MCS
+    seL4_CPtr host_reply;
+#endif
     /* Support & Resource Managements */
     vka_t *vka;
     ps_io_ops_t *io_ops;

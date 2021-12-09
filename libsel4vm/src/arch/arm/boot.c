@@ -69,6 +69,7 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     seL4_Word null_cap_data = seL4_NilData;
     cspacepath_t src = {0};
     cspacepath_t dst = {0};
+    seL4_CPtr fault_ep;
 
     seL4_Word badge = VCPU_BADGE_CREATE((seL4_Word)vcpu->vcpu_id);
 
@@ -80,6 +81,9 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     assert(!err);
 
     /* Copy it to the cspace of the VM for fault IPC */
+#ifdef CONFIG_KERNEL_MCS
+    fault_ep = dst.capPtr;
+#endif
     src = dst;
     dst.root = vm->cspace.cspace_obj.cptr;
     dst.capPtr = VM_FAULT_EP_SLOT + vcpu->vcpu_id;
@@ -90,12 +94,31 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     /* Create TCB */
     err = vka_alloc_tcb(vm->vka, &vcpu->tcb.tcb);
     assert(!err);
+
+#ifdef CONFIG_KERNEL_MCS
+    err = vka_alloc_sched_context(vm->vka, &vcpu->tcb.sc);
+    assert(!err);
+    uint64_t timeslice = CONFIG_BOOT_THREAD_TIME_SLICE * US_IN_MS;
+    err = seL4_SchedControl_Configure(vcpu->tcb.sched_ctrl.cptr, vcpu->tcb.sc.cptr, timeslice, timeslice, 0, 0);
+    assert(!err);
+
+    err = seL4_TCB_Configure(vcpu->tcb.tcb.cptr,
+                             vm->cspace.cspace_obj.cptr, vm->cspace.cspace_root_data,
+                             vm->mem.vm_vspace_root.cptr, null_cap_data, 0, seL4_CapNull);
+#else
     err = seL4_TCB_Configure(vcpu->tcb.tcb.cptr, dst.capPtr,
                              vm->cspace.cspace_obj.cptr, vm->cspace.cspace_root_data,
                              vm->mem.vm_vspace_root.cptr, null_cap_data, 0, seL4_CapNull);
+#endif
     assert(!err);
+
+#ifdef CONFIG_KERNEL_MCS
+    err = seL4_TCB_SetSchedParams(vcpu->tcb.tcb.cptr, simple_get_tcb(vm->simple), vcpu->tcb.priority,
+                                  vcpu->tcb.priority, vcpu->tcb.sc.cptr, fault_ep);
+#else
     err = seL4_TCB_SetSchedParams(vcpu->tcb.tcb.cptr, simple_get_tcb(vm->simple), vcpu->tcb.priority,
                                   vcpu->tcb.priority);
+#endif
     assert(!err);
     err = seL4_ARM_VCPU_SetTCB(vcpu->vcpu.cptr, vcpu->tcb.tcb.cptr);
     assert(!err);

@@ -102,9 +102,15 @@ static int vm_vppi_event_handler(vm_vcpu_t *vcpu)
             return -1;
         }
     }
+
     seL4_MessageInfo_t reply;
     reply = seL4_MessageInfo_new(0, 0, 0, 0);
+#ifdef CONFIG_KERNEL_MCS
+    seL4_Send(vcpu->vm->host_reply, reply);
+#else
     seL4_Reply(reply);
+#endif
+
     return 0;
 }
 
@@ -118,7 +124,11 @@ static int vm_user_exception_handler(vm_vcpu_t *vcpu)
     if (!err) {
         seL4_MessageInfo_t reply;
         reply = seL4_MessageInfo_new(0, 0, 0, 0);
+#ifdef CONFIG_KERNEL_MCS
+        seL4_Send(vcpu->vm->host_reply, reply);
+#else
         seL4_Reply(reply);
+#endif
     }
     return VM_EXIT_HANDLED;
 }
@@ -232,7 +242,11 @@ int vm_run_arch(vm_t *vm)
         seL4_Word label;
         int vm_exit_reason;
 
+#ifdef CONFIG_KERNEL_MCS
+        tag = seL4_Recv(vm->host_endpoint, &sender_badge, vm->host_reply);
+#else
         tag = seL4_Recv(vm->host_endpoint, &sender_badge);
+#endif
         label = seL4_MessageInfo_get_label(tag);
         if (sender_badge >= MIN_VCPU_BADGE && sender_badge <= MAX_VCPU_BADGE) {
             seL4_Word vcpu_idx = VCPU_BADGE_IDX(sender_badge);
@@ -241,6 +255,9 @@ int vm_run_arch(vm_t *vm)
                 ret = -1;
             } else {
                 vm_exit_reason = vm_decode_exit(label);
+#ifdef CONFIG_KERNEL_MCS
+                vm->vcpus[vcpu_idx]->vcpu_arch.fault->reply_cap.capPtr = vm->host_reply;
+#endif
                 ret = arm_exit_handlers[vm_exit_reason](vm->vcpus[vcpu_idx]);
                 if (ret == VM_EXIT_HANDLE_ERROR) {
                     vm->run.exit_reason = VM_GUEST_ERROR_EXIT;

@@ -34,8 +34,13 @@
  * @param {const char *} name           String used to describe VM. Useful for debugging
  * @return                              0 on success, otherwise -1 for error
  */
+#ifdef CONFIG_KERNEL_MCS
+int vm_init(vm_t *vm, vka_t *vka, simple_t *host_simple, vspace_t host_vspace,
+            ps_io_ops_t *io_ops, seL4_CPtr host_endpoint, seL4_CPtr host_reply, const char *name);
+#else
 int vm_init(vm_t *vm, vka_t *vka, simple_t *host_simple, vspace_t host_vspace,
             ps_io_ops_t *io_ops, seL4_CPtr host_endpoint, const char *name);
+#endif
 
 /***
  * @function vm_create_vcpu(vm, priority)

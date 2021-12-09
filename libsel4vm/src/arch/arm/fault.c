@@ -292,9 +292,11 @@ int new_vcpu_fault(fault_t *fault, uint32_t hsr)
     fault->width = -1;
     fault->content = 0;
     fault->stage = 1;
+#ifndef CONFIG_KERNEL_MCS
     assert(fault->reply_cap.capPtr);
     err = vka_cnode_saveCaller(&fault->reply_cap);
     assert(!err);
+#endif
 
     return err;
 }
@@ -343,10 +345,12 @@ int new_memory_fault(fault_t *fault)
         fault->content = CONTENT_DATA | CONTENT_WIDTH;
     }
 
+#ifndef CONFIG_KERNEL_MCS
     /* Gather additional information */
     assert(fault->reply_cap.capPtr);
     err = vka_cnode_saveCaller(&fault->reply_cap);
     assert(!err);
+#endif
 
     return err;
 }

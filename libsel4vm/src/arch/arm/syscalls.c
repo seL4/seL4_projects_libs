@@ -124,7 +124,11 @@ int vm_syscall_handler(vm_vcpu_t *vcpu)
     if (!err) {
         seL4_MessageInfo_t reply;
         reply = seL4_MessageInfo_new(0, 0, 0, 0);
+#ifdef CONFIG_KERNEL_MCS
+        seL4_Send(vcpu->vm->host_reply, reply);
+#else
         seL4_Reply(reply);
+#endif
     }
     return err;
 }
