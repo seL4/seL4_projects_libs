@@ -161,7 +161,7 @@ static vm_frame_t dataport_memory_iterator(uintptr_t addr, void *cookie)
     vm_t *vm = dataport_cookie->vm;
     uintptr_t dataport_start = dataport_cookie->dataport_start;
     size_t dataport_size = dataport_cookie->dataport_size;
-    int page_size = seL4_PageBits;
+    int page_size = seL4_LargePageBits;
 
     uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
     if (frame_start <  dataport_start ||

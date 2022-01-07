@@ -161,14 +161,24 @@ int vm_ram_touch(vm_t *vm, uintptr_t addr, size_t size, ram_touch_callback_fn to
     access_cookie.data = cookie;
     access_cookie.vm = vm;
     for (current_addr = addr; current_addr < end_addr; current_addr = next_addr) {
+	int sz = seL4_PageBits;
+
         uintptr_t current_aligned = PAGE_ALIGN_4K(current_addr);
         uintptr_t next_page_start = current_aligned + PAGE_SIZE_4K;
+
+        /* user-VM resides at 0x48000000 - 0x4fffffff */
+        if (current_addr >= 0x48000000 && current_addr < 0x50000000) {
+            sz = seL4_LargePageBits;
+            current_aligned = PAGE_ALIGN_2M(current_addr);
+            next_page_start = current_aligned + PAGE_SIZE_2M;
+        }
+
         next_addr = MIN(end_addr, next_page_start);
         access_cookie.size = next_addr - current_addr;
         access_cookie.offset = current_addr - addr;
         access_cookie.current_addr = current_addr;
         int result = vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace, (void *)current_aligned,
-                                                      seL4_PageBits, seL4_AllRights, 1, touch_access_callback, &access_cookie);
+                                                      sz, seL4_AllRights, 1, touch_access_callback, &access_cookie);
         if (result) {
             return result;
         }
