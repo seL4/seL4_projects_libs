@@ -156,13 +156,7 @@ static vmm_pci_entry_t vmm_virtio_net_pci_bar(unsigned int iobase,
             .size_bits = iobase_size_bits
         }
     };
-    vmm_pci_entry_t virtio_pci_bar;
-    if (emulate_bar_access) {
-        virtio_pci_bar = vmm_pci_create_bar_emulation(entry, 1, bars);
-    } else {
-        virtio_pci_bar = vmm_pci_create_passthrough_bar_emulation(entry, 1, bars);
-    }
-    return virtio_pci_bar;
+    return vmm_pci_create_bar_emulation(entry, 1, bars);
 }
 
 virtio_net_t *common_make_virtio_net(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port_list_t *ioport,

@@ -94,13 +94,7 @@ static int construct_connection_bar(vm_t *vm, struct connection_info *info, int 
                 .size_bits = info[conn_idx].dataport_size_bits
             }
         };
-        vmm_pci_entry_t connection_pci_bar;
-        /* TODO: Make both architecture go through the same interface */
-        if (config_set(CONFIG_ARCH_X86)) {
-            connection_pci_bar = vmm_pci_create_bar_emulation(entry, 2, bars);
-        } else if (config_set(CONFIG_ARCH_ARM)) {
-            connection_pci_bar = vmm_pci_create_passthrough_bar_emulation(entry, 2, bars);
-        }
+        vmm_pci_entry_t connection_pci_bar = vmm_pci_create_bar_emulation(entry, 2, bars);
         vmm_pci_add_entry(pci, connection_pci_bar, NULL);
     }
     return 0;

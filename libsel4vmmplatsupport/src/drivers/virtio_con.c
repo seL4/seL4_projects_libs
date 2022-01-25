@@ -83,7 +83,7 @@ static vmm_pci_entry_t vmm_virtio_console_pci_bar(unsigned int iobase,
             .size_bits = iobase_size_bits
         }
     };
-    return vmm_pci_create_passthrough_bar_emulation(entry, 1, bars);
+    return vmm_pci_create_bar_emulation(entry, 1, bars);
 }
 
 virtio_con_t *common_make_virtio_con(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port_list_t *ioport,

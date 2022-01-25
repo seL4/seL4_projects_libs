@@ -71,13 +71,12 @@ struct pci_cfg_data {
     vmm_pci_space_t *pci;
 };
 
-static void pci_cfg_read_fault(struct device *d, vm_t *vm, vm_vcpu_t *vcpu, vmm_pci_address_t pci_addr,
-                               uint8_t offset, vmm_pci_entry_t *dev)
+static void pci_cfg_read_fault(vm_vcpu_t *vcpu, uint8_t offset, size_t len, vmm_pci_entry_t *dev)
 {
     uint32_t data = 0;
     int err = 0;
 
-    err = dev->ioread((void *)dev->cookie, offset, get_vcpu_fault_size(vcpu), &data);
+    err = dev->ioread((void *)dev->cookie, offset, len, &data);
     if (err) {
         ZF_LOGE("Failure performing read from PCI CFG device");
     }
@@ -86,27 +85,16 @@ static void pci_cfg_read_fault(struct device *d, vm_t *vm, vm_vcpu_t *vcpu, vmm_
     set_vcpu_fault_data(vcpu, data << s);
 }
 
-static void pci_cfg_write_fault(struct device *d, vm_t *vm, vm_vcpu_t *vcpu, vmm_pci_address_t pci_addr,
-                                uint8_t offset, vmm_pci_entry_t *dev)
+static void pci_cfg_write_fault(vm_vcpu_t *vcpu, uint8_t offset, size_t len, vmm_pci_entry_t *dev)
 {
     uint32_t mask;
     uint32_t value;
-    uint8_t bar;
     int err;
 
-    bar = (offset - PCI_BAR_OFFSET(0)) / sizeof(uint32_t);
     mask = get_vcpu_fault_data_mask(vcpu);
     value = get_vcpu_fault_data(vcpu) & mask;
-    pci_bar_emulation_t *bar_emul = dev->cookie;
-    /* Linux will mask the PCI bar expecting its next read to be the size of the bar.
-    * To handle this we write the bars size to pci header such that the kernels next read will
-    * be the size. */
-    if (bar < 6 && value == PCI_CFG_BAR_MASK) {
-        uint32_t bar_size =  BIT((bar_emul->bars[bar].size_bits));
-        err = dev->iowrite((void *)dev->cookie, offset, sizeof(bar_size), bar_size);
-    } else {
-        err = dev->iowrite((void *)dev->cookie, offset, sizeof(value), value);
-    }
+
+    err = dev->iowrite((void *)dev->cookie, offset, len, value);
     if (err) {
         ZF_LOGE("Failure writing to PCI CFG device");
     }
@@ -135,9 +123,9 @@ static memory_fault_result_t pci_cfg_fault_handler(vm_t *vm, vm_vcpu_t *vcpu, ui
     }
 
     if (is_vcpu_read_fault(vcpu)) {
-        pci_cfg_read_fault(dev, vm, vcpu, pci_addr, offset, pci_dev);
+        pci_cfg_read_fault(vcpu, offset, fault_length, pci_dev);
     } else {
-        pci_cfg_write_fault(dev, vm, vcpu, pci_addr, offset, pci_dev);
+        pci_cfg_write_fault(vcpu, offset, fault_length, pci_dev);
     }
 
     advance_vcpu_fault(vcpu);
