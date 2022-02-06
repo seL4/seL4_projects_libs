@@ -25,8 +25,6 @@ the creation of pci device entries and accessors the their configuration spaces.
 
 > [`vmm_pci_create_bar_emulation(existing, num_bars, bars)`](#function-vmm_pci_create_bar_emulationexisting-num_bars-bars)
 
-> [`vmm_pci_create_passthrough_bar_emulation(existing, num_bars, bars)`](#function-vmm_pci_create_passthrough_bar_emulationexisting-num_bars-bars)
-
 > [`vmm_pci_create_irq_emulation(existing, irq)`](#function-vmm_pci_create_irq_emulationexisting-irq)
 
 > [`vmm_pci_create_cap_emulation(existing, num_caps, cap, num_ranges, range_starts, range_ends)`](#function-vmm_pci_create_cap_emulationexisting-num_caps-cap-num_ranges-range_starts-range_ends)
@@ -146,23 +144,6 @@ Construct a pci entry that emulates configuration space bar read/write's. The re
 **Returns:**
 
 - `vmm_pci_entry_t` for emulated bar device
-
-Back to [interface description](#module-pcih).
-
-### Function `vmm_pci_create_passthrough_bar_emulation(existing, num_bars, bars)`
-
-Construct a pci entry that passes through all bar read/writes through to emulated io(read/write) handlers. This is the
-inverse of `vmm_pci_create_bar_emulation`
-
-**Parameters:**
-
-- `existing {vmm_pci_entry_t}`: Existing PCI entry to wrap over and passthrough bar read/writes
-- `num_bars {int}`: Number of emulated bars in PCI entry
-- `bars {vmm_pci_bar_t *}`: Set of bars to passthrough access to
-
-**Returns:**
-
-- `vmm_pci_entry_t` for passthrough bar device
 
 Back to [interface description](#module-pcih).
 

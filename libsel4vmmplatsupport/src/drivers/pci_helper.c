@@ -230,18 +230,6 @@ static int pci_bar_emul_write(void *cookie, int offset, int size, uint32_t value
     return 0;
 }
 
-static int pci_bar_passthrough_emul_read(void *cookie, int offset, int size, uint32_t *result)
-{
-    pci_bar_emulation_t *emul = (pci_bar_emulation_t *)cookie;
-    return emul->passthrough.ioread(emul->passthrough.cookie, offset, size, result);
-}
-
-static int pci_bar_passthrough_emul_write(void *cookie, int offset, int size, uint32_t value)
-{
-    pci_bar_emulation_t *emul = (pci_bar_emulation_t *)cookie;
-    return emul->passthrough.iowrite(emul->passthrough.cookie, offset, size, value);
-}
-
 vmm_pci_entry_t vmm_pci_create_bar_emulation(vmm_pci_entry_t existing, int num_bars, vmm_pci_bar_t *bars)
 {
     pci_bar_emulation_t *bar_emul = calloc(1, sizeof(*bar_emul));
@@ -252,19 +240,6 @@ vmm_pci_entry_t vmm_pci_create_bar_emulation(vmm_pci_entry_t existing, int num_b
     memset(bar_emul->bar_writes, 0, sizeof(bar_emul->bar_writes));
     return (vmm_pci_entry_t) {
         .cookie = bar_emul, .ioread = pci_bar_emul_read, .iowrite = pci_bar_emul_write
-    };
-}
-
-vmm_pci_entry_t vmm_pci_create_passthrough_bar_emulation(vmm_pci_entry_t existing, int num_bars, vmm_pci_bar_t *bars)
-{
-    pci_bar_emulation_t *bar_emul = calloc(1, sizeof(*bar_emul));
-    assert(bar_emul);
-    memcpy(bar_emul->bars, bars, sizeof(vmm_pci_bar_t) * num_bars);
-    bar_emul->passthrough = existing;
-    bar_emul->num_bars = num_bars;
-    memset(bar_emul->bar_writes, 0, sizeof(bar_emul->bar_writes));
-    return (vmm_pci_entry_t) {
-        .cookie = bar_emul, .ioread = pci_bar_passthrough_emul_read, .iowrite = pci_bar_passthrough_emul_write
     };
 }
 

@@ -235,17 +235,6 @@ vmm_pci_entry_t vmm_pci_create_passthrough(vmm_pci_address_t addr, vmm_pci_confi
 vmm_pci_entry_t vmm_pci_create_bar_emulation(vmm_pci_entry_t existing, int num_bars, vmm_pci_bar_t *bars);
 
 /***
- * @function vmm_pci_create_passthrough_bar_emulation(existing, num_bars, bars)
- * Construct a pci entry that passes through all bar read/writes through to emulated io(read/write) handlers. This is the
- * inverse of `vmm_pci_create_bar_emulation`
- * @param {vmm_pci_entry_t} existing    Existing PCI entry to wrap over and passthrough bar read/writes
- * @param {int} num_bars                Number of emulated bars in PCI entry
- * @param {vmm_pci_bar_t *} bars        Set of bars to passthrough access to
- * @return                               `vmm_pci_entry_t` for passthrough bar device
- */
-vmm_pci_entry_t vmm_pci_create_passthrough_bar_emulation(vmm_pci_entry_t existing, int num_bars, vmm_pci_bar_t *bars);
-
-/***
  * @function vmm_pci_create_irq_emulation(existing, irq)
  * Construct a pci entry the emulates configuration space interrupt read/write's. The rest of the configuration space is passed on
  * @param {vmm_pci_entry_t} existing    Existing PCI entry to wrap over and emulate its IRQ accesses
