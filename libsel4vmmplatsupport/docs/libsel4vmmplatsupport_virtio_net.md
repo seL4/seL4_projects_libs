@@ -14,7 +14,7 @@ guest.
 
 **Functions**:
 
-> [`common_make_virtio_net(vm, pci, ioport, ioport_range, port_type, interrupt_pin, interrupt_line, backend, emulate_bar_access)`](#function-common_make_virtio_netvm-pci-ioport-ioport_range-port_type-interrupt_pin-interrupt_line-backend-emulate_bar_access)
+> [`common_make_virtio_net(vm, pci, ioport, ioport_range, port_type, interrupt_pin, interrupt_line, backend)`](#function-common_make_virtio_netvm-pci-ioport-ioport_range-port_type-interrupt_pin-interrupt_line-backend)
 
 > [`virtio_net_default_backend()`](#function-virtio_net_default_backend)
 
@@ -29,7 +29,7 @@ guest.
 
 The interface `virtio_net.h` defines the following functions.
 
-### Function `common_make_virtio_net(vm, pci, ioport, ioport_range, port_type, interrupt_pin, interrupt_line, backend, emulate_bar_access)`
+### Function `common_make_virtio_net(vm, pci, ioport, ioport_range, port_type, interrupt_pin, interrupt_line, backend)`
 
 Initialise a new virtio_net device with Base Address Registers (BARs) starting at iobase and backend functions
 specified by the raw_iface_funcs struct.
@@ -45,7 +45,6 @@ virtio_net_default_backend for default methods.
 - `interrupt_pin {unsigned int}`: PCI interrupt pin e.g. INTA = 1, INTB = 2 ,...
 - `interrupt_line {unsigned int}`: PCI interrupt line for virtio net IRQS
 - `backend {struct raw_iface_funcs}`: Function pointers to backend implementation. Can be initialised by
-- `emulate_bar {bool}`: Emulate read and writes accesses to the PCI device Base Address Registers.
 
 **Returns:**
 
