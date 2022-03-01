@@ -10,6 +10,6 @@
 memory_fault_result_t default_error_fault_callback(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t fault_addr,
                                                    size_t fault_length, void *cookie)
 {
-    ZF_LOGE("Failed to handle fault addr: 0x%x", fault_addr);
+    ZF_LOGE("Failed to handle fault addr: 0x%"PRIxPTR, fault_addr);
     return FAULT_ERROR;
 }

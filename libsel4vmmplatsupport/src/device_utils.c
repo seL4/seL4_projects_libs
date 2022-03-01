@@ -94,7 +94,7 @@ static memory_fault_result_t handle_listening_fault(vm_t *vm, vm_vcpu_t *vcpu, u
     printf(" ");
     seL4_Word data = get_vcpu_fault_data(vcpu);
     seL4_Word data_mask = get_vcpu_fault_data_mask(vcpu);
-    printf("0x%x", data & data_mask);
+    printf("0x%"SEL4_PRIx_word, data & data_mask);
     printf(" address %p @ pc %p\n", (void *) fault_addr,
            (void *) get_vcpu_fault_ip(vcpu));
     advance_vcpu_fault(vcpu);

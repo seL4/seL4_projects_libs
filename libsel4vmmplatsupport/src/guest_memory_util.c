@@ -126,7 +126,7 @@ static vm_frame_t maybe_device_alloc_iterator(uintptr_t addr, void *cookie)
     uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
     ret = vka_alloc_frame_maybe_device(vm->vka, page_size, true, &object);
     if (ret) {
-        ZF_LOGE("Failed to allocate frame for address 0x%x", addr);
+        ZF_LOGE("Failed to allocate frame for address 0x%"PRIxPTR, addr);
         return frame_result;
     }
     frame_result.cptr = object.cptr;
@@ -149,7 +149,7 @@ static vm_frame_t frame_alloc_iterator(uintptr_t addr, void *cookie)
     uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
     ret = vka_alloc_frame(vm->vka, page_size, &object);
     if (ret) {
-        ZF_LOGE("Failed to allocate frame for address 0x%x", addr);
+        ZF_LOGE("Failed to allocate frame for address 0x%"PRIxPTR, addr);
         return frame_result;
     }
     frame_result.cptr = object.cptr;

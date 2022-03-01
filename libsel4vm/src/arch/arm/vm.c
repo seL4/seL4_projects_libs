@@ -94,7 +94,7 @@ static int vm_vppi_event_handler(vm_vcpu_t *vcpu)
      * If not the interrupt will dropped by the VM */
     err = vm_inject_irq(vcpu, ppi_irq);
     if (err) {
-        ZF_LOGE("VPPI IRQ %d dropped on vcpu %d", ppi_irq, vcpu->vcpu_id);
+        ZF_LOGE("VPPI IRQ %"SEL4_PRId_word" dropped on vcpu %d", ppi_irq, vcpu->vcpu_id);
         /* Acknowledge to unmask it as our guest will not use the interrupt */
         seL4_Error ack_err = seL4_ARM_VCPU_AckVPPI(vcpu->vcpu.cptr, ppi_irq);
         if (ack_err) {
