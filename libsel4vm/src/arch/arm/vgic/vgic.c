@@ -143,7 +143,7 @@ struct gic_dist_map {
     uint32_t active0[CONFIG_MAX_NUM_NODES];             /* [0x300, 0x304) */
     uint32_t active[31];                                /* [0x300, 0x380) */
     uint32_t active_clr0[CONFIG_MAX_NUM_NODES];         /* [0x380, 0x384) */
-    uint32_t active_clr[32];                            /* [0x384, 0x400) */
+    uint32_t active_clr[31];                            /* [0x384, 0x400) */
     uint32_t priority0[CONFIG_MAX_NUM_NODES][8];        /* [0x400, 0x420) */
     uint32_t priority[247];                             /* [0x420, 0x7FC) */
     uint32_t res3;                                      /* 0x7FC */
