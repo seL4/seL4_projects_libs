@@ -183,7 +183,6 @@ struct gic_dist_map {
 };
 
 #define MAX_LR_OVERFLOW 64
-#define LR_OF_NEXT(_i) (((_i) == MAX_LR_OVERFLOW - 1) ? 0 : ((_i) + 1))
 
 struct lr_of {
     struct virq_handle irqs[MAX_LR_OVERFLOW]; /* circular buffer */
@@ -191,6 +190,14 @@ struct lr_of {
     size_t tail;
     bool full;
 };
+
+static inline size_t LR_OF_NEXT(size_t idx)
+{
+    struct lr_of *dummy_lr_of; /* need this to use ARRAY_SIZE() */
+    const size_t idx_max = ARRAY_SIZE(dummy_lr_of->irqs) - 1;
+    assert(idx <= idx_max); /* the index must be sane when calling this */
+    return (idx == idx_max) ? 0 : (idx + 1);
+}
 
 typedef struct vgic {
 /// Mirrors the vcpu list registers
