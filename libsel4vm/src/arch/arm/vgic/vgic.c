@@ -130,7 +130,7 @@ static inline void virq_ack(vm_vcpu_t *vcpu, struct virq_handle *irq)
     irq->ack(vcpu, irq->virq, irq->token);
 }
 
-/* Memory map for GIC distributer */
+/* Memory map for GIC distributor */
 struct gic_dist_map {
     uint32_t enable;                                    /* 0x000 */
     uint32_t ic_type;                                   /* 0x004 */
@@ -200,7 +200,7 @@ typedef struct vgic {
 /// Complete set of virtual irqs
     struct virq_handle *sgi_ppi_irq[CONFIG_MAX_NUM_NODES][NUM_SGI_VIRQS + NUM_PPI_VIRQS];
     struct virq_handle *virqs[MAX_VIRQS];
-/// Virtual distributer registers
+/// Virtual distributor registers
     struct gic_dist_map *dist;
 } vgic_t;
 
@@ -546,7 +546,7 @@ int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
 static int vgic_dist_enable(struct vgic_dist_device *d, vm_t *vm)
 {
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
-    DDIST("enabling gic distributer\n");
+    DDIST("enabling gic distributor\n");
     gic_dist->enable = 1;
     return 0;
 }
@@ -554,7 +554,7 @@ static int vgic_dist_enable(struct vgic_dist_device *d, vm_t *vm)
 static int vgic_dist_disable(struct vgic_dist_device *d, vm_t *vm)
 {
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
-    DDIST("disabling gic distributer\n");
+    DDIST("disabling gic distributor\n");
     gic_dist->enable = 0;
     return 0;
 }
