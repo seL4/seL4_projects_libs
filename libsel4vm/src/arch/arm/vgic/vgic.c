@@ -110,10 +110,6 @@
 #define IRQ_IDX(irq) ((irq) / 32)
 #define IRQ_BIT(irq) (1U << ((irq) % 32))
 
-#define not_pending(...) !is_pending(__VA_ARGS__)
-#define not_active(...)  !is_active(__VA_ARGS__)
-#define not_enabled(...) !is_enabled(__VA_ARGS__)
-
 struct virq_handle {
     int virq;
     irq_ack_fn_t ack;
@@ -121,9 +117,6 @@ struct virq_handle {
 };
 
 typedef struct virq_handle *virq_handle_t;
-
-/* Inject interrupt into vcpu */
-static int vgic_vcpu_inject_irq(struct vgic_dist_device *d, vm_vcpu_t *inject_vcpu, struct virq_handle *irq);
 
 static inline void virq_ack(vm_vcpu_t *vcpu, struct virq_handle *irq)
 {
@@ -182,28 +175,31 @@ struct gic_dist_map {
     uint32_t component_id[4];                           /* [0xFF0, 0xFFF] */
 };
 
-#define MAX_LR_OVERFLOW 64
+/* TODO: A typical number of list registers supported by GIC is four, but not
+ * always. One particular way to probe the number of registers is to inject a
+ * dummy IRQ with seL4_ARM_VCPU_InjectIRQ(), using LR index high enough to be
+ * not supported by any target; the kernel will reply with the supported range
+ * of LR indexes.
+ */
+#define NUM_LIST_REGS 4
+/* This is a rather abritrary number, increase if needed. */
+#define MAX_IRQ_QUEUE_LEN 64
+#define IRQ_QUEUE_NEXT(_i) (((_i) + 1) & (MAX_IRQ_QUEUE_LEN - 1))
 
-struct lr_of {
-    struct virq_handle irqs[MAX_LR_OVERFLOW]; /* circular buffer */
+static_assert((MAX_IRQ_QUEUE_LEN & (MAX_IRQ_QUEUE_LEN - 1)) == 0,
+              "IRQ ring buffer size must be power of two");
+
+struct irq_queue {
+    struct virq_handle *irqs[MAX_IRQ_QUEUE_LEN]; /* circular buffer */
     size_t head;
     size_t tail;
-    bool full;
 };
-
-static inline size_t LR_OF_NEXT(size_t idx)
-{
-    struct lr_of *dummy_lr_of; /* need this to use ARRAY_SIZE() */
-    const size_t idx_max = ARRAY_SIZE(dummy_lr_of->irqs) - 1;
-    assert(idx <= idx_max); /* the index must be sane when calling this */
-    return (idx == idx_max) ? 0 : (idx + 1);
-}
 
 typedef struct vgic {
 /// Mirrors the vcpu list registers
-    struct virq_handle *irq[CONFIG_MAX_NUM_NODES][MAX_LR_OVERFLOW - 1];
+    struct virq_handle *lr_shadow[CONFIG_MAX_NUM_NODES][NUM_LIST_REGS];
 /// IRQs that would not fit in the vcpu list registers
-    struct lr_of lr_overflow[CONFIG_MAX_NUM_NODES];
+    struct irq_queue irq_queue[CONFIG_MAX_NUM_NODES];
 /// Complete set of virtual irqs
     struct virq_handle *sgi_ppi_irq[CONFIG_MAX_NUM_NODES][NUM_SGI_VIRQS + NUM_PPI_VIRQS];
     struct virq_handle *virqs[MAX_VIRQS];
@@ -273,11 +269,10 @@ static int vgic_virq_init(vgic_t *vgic)
 {
     memset(vgic->virqs, 0, sizeof(vgic->virqs));
     for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        memset(vgic->irq[i], 0, sizeof(vgic->irq[i]));
-        vgic->lr_overflow[i].head = 0;
-        vgic->lr_overflow[i].tail = 0;
-        vgic->lr_overflow[i].full = false;
-        memset(vgic->lr_overflow[i].irqs, 0, sizeof(vgic->lr_overflow[i].irqs));
+        memset(vgic->lr_shadow[i], 0, sizeof(vgic->lr_shadow[i]));
+        vgic->irq_queue[i].head = 0;
+        vgic->irq_queue[i].tail = 0;
+        memset(vgic->irq_queue[i].irqs, 0, sizeof(vgic->irq_queue[i].irqs));
     }
     return 0;
 }
@@ -303,13 +298,6 @@ static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d
     assert(d);
     assert(d->priv);
     return vgic_device_get_vgic(d)->dist;
-}
-
-static inline struct virq_handle **vgic_priv_get_lr(struct vgic_dist_device *d, vm_vcpu_t *vcpu)
-{
-    assert(d);
-    assert(d->priv);
-    return vgic_device_get_vgic(d)->irq[vcpu->vcpu_id];
 }
 
 static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
@@ -457,98 +445,80 @@ static inline int is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
     return is_spi_active(gic_dist, irq, vcpu_id);
 }
 
-static inline int vgic_add_overflow_cpu(struct lr_of *lr_overflow, struct virq_handle *irq)
+static inline int vgic_irq_enqueue(vgic_t *vgic, vm_vcpu_t *vcpu, struct virq_handle *irq)
 {
-    /* Add to overflow list */
-    int idx = lr_overflow->tail;
-    if (unlikely(lr_overflow->full)) {
-        ZF_LOGF("too many overflow irqs");
+    struct irq_queue *q = &vgic->irq_queue[vcpu->vcpu_id];
+
+    if (unlikely(IRQ_QUEUE_NEXT(q->tail) == q->head)) {
         return -1;
     }
 
-    lr_overflow->irqs[idx] = *irq;
-    lr_overflow->full = (lr_overflow->head == LR_OF_NEXT(lr_overflow->tail));
-    if (!lr_overflow->full) {
-        lr_overflow->tail = LR_OF_NEXT(idx);
-    }
+    q->irqs[q->tail] = irq;
+    q->tail = IRQ_QUEUE_NEXT(q->tail);
+
     return 0;
 }
 
-static inline int vgic_add_overflow(vgic_t *vgic, struct virq_handle *irq, vm_vcpu_t *vcpu)
+static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, vm_vcpu_t *vcpu)
 {
-    return vgic_add_overflow_cpu(&vgic->lr_overflow[vcpu->vcpu_id], irq);
+    struct irq_queue *q = &vgic->irq_queue[vcpu->vcpu_id];
+    struct virq_handle *virq = NULL;
+
+    if (q->head != q->tail) {
+        virq = q->irqs[q->head];
+        q->head = IRQ_QUEUE_NEXT(q->head);
+    }
+
+    return virq;
 }
 
-static inline void vgic_handle_overflow_cpu(vgic_t *vgic, struct lr_of *lr_overflow, vm_vcpu_t *vcpu)
+static int vgic_find_empty_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu)
 {
-    /* copy tail, as vgic_vcpu_inject_irq can mutate it, and we do
-     * not want to process any new overflow irqs */
-    size_t tail = lr_overflow->tail;
-    for (size_t i = lr_overflow->head; i != tail; i = LR_OF_NEXT(i)) {
-        if (vgic_vcpu_inject_irq(vgic_dist, vcpu, &lr_overflow->irqs[i]) == 0) {
-            lr_overflow->head = LR_OF_NEXT(i);
-            lr_overflow->full = (lr_overflow->head == LR_OF_NEXT(lr_overflow->tail));
-        } else {
-            break;
+    for (int i = 0; i < NUM_LIST_REGS; i++) {
+        if (vgic->lr_shadow[vcpu->vcpu_id][i] == NULL) {
+            return i;
         }
     }
+
+    return -1;
 }
 
-static inline void vgic_handle_overflow(vgic_t *vgic, vm_vcpu_t *vcpu)
+static int vgic_vcpu_load_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu, int idx, struct virq_handle *irq)
 {
-    vgic_handle_overflow_cpu(vgic, &vgic->lr_overflow[vcpu->vcpu_id], vcpu);
-}
-
-static int vgic_vcpu_inject_irq(struct vgic_dist_device *d, vm_vcpu_t *inject_vcpu, struct virq_handle *irq)
-{
-    vgic_t *vgic;
-    int err;
-    int i;
-
-    vgic = vgic_device_get_vgic(d);
-
-    seL4_CPtr vcpu;
-    vcpu = inject_vcpu->vcpu.cptr;
-    for (i = 0; i < MAX_LR_OVERFLOW; i++) {
-        if (vgic->irq[inject_vcpu->vcpu_id][i] == NULL) {
-            break;
-        }
-    }
-    err = seL4_ARM_VCPU_InjectIRQ(vcpu, irq->virq, 0, 0, i);
-    assert((i < 4) || err);
-    if (!err) {
-        /* Shadow */
-        vgic->irq[inject_vcpu->vcpu_id][i] = irq;
+    int err = seL4_ARM_VCPU_InjectIRQ(vcpu->vcpu.cptr, irq->virq, 0, 0, idx);
+    if (err) {
+        ZF_LOGF("Failure loading vGIC list register (error %d)", err);
         return err;
-    } else {
-        /* Add to overflow list */
-        return vgic_add_overflow(vgic, irq, inject_vcpu);
     }
+
+    vgic->lr_shadow[vcpu->vcpu_id][idx] = irq;
+
+    return 0;
 }
 
 int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
 {
     /* STATE d) */
-    struct gic_dist_map *gic_dist;
-    struct virq_handle **lr;
-
     assert(vgic_dist);
-    gic_dist = vgic_priv_get_dist(vgic_dist);
-    lr = vgic_priv_get_lr(vgic_dist, vcpu);
-    assert(lr[idx]);
+    struct gic_dist_map *gic_dist = vgic_priv_get_dist(vgic_dist);
+    vgic_t *vgic = vgic_device_get_vgic(vgic_dist);
+    struct virq_handle **lr_shadow = vgic->lr_shadow[vcpu->vcpu_id];
+    assert(lr_shadow[idx]);
 
     /* Clear pending */
-    DIRQ("Maintenance IRQ %d\n", lr[idx]->virq);
-    set_pending(gic_dist, lr[idx]->virq, false, vcpu->vcpu_id);
-    virq_ack(vcpu, lr[idx]);
+    DIRQ("Maintenance IRQ %d\n", lr_shadow[idx]->virq);
+    set_pending(gic_dist, lr_shadow[idx]->virq, false, vcpu->vcpu_id);
+    virq_ack(vcpu, lr_shadow[idx]);
+    lr_shadow[idx] = NULL;
 
     /* Check the overflow list for pending IRQs */
-    lr[idx] = NULL;
-    vgic_t *vgic = vgic_device_get_vgic(vgic_dist);
-    vgic_handle_overflow(vgic, vcpu);
+    struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
+    if (virq) {
+        return vgic_vcpu_load_list_reg(vgic, vcpu, idx, virq);
+    }
+
     return 0;
 }
-
 
 static int vgic_dist_enable(struct vgic_dist_device *d, vm_t *vm)
 {
@@ -578,7 +548,7 @@ static int vgic_dist_enable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int
     virq_data = virq_find_irq_data(vgic, vcpu, irq);
     if (virq_data) {
         /* STATE b) */
-        if (not_pending(gic_dist, virq_data->virq, vcpu->vcpu_id)) {
+        if (!is_pending(gic_dist, virq_data->virq, vcpu->vcpu_id)) {
             virq_ack(vcpu, virq_data);
         }
     } else {
@@ -601,35 +571,45 @@ static int vgic_dist_disable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, in
 static int vgic_dist_set_pending_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
 {
     /* STATE c) */
-    struct gic_dist_map *gic_dist;
-    vgic_t *vgic;
-    struct virq_handle *virq_data;
+    struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
+    vgic_t *vgic = vgic_device_get_vgic(d);
 
-    gic_dist = vgic_priv_get_dist(d);
-    vgic = vgic_device_get_vgic(d);
+    struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu, irq);
 
-    virq_data = virq_find_irq_data(vgic, vcpu, irq);
-    /* If it is enabled, inject the IRQ */
-    if (virq_data && gic_dist->enable && is_enabled(gic_dist, irq, vcpu->vcpu_id)) {
-        if (is_pending(gic_dist, virq_data->virq, vcpu->vcpu_id)) {
-            return 0;
-        }
-
-        int err;
-        DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
-
-        set_pending(gic_dist, virq_data->virq, true, vcpu->vcpu_id);
-        err = vgic_vcpu_inject_irq(d, vcpu, virq_data);
-        assert(!err);
-
-        return err;
-    } else {
-        /* No further action */
+    if (!virq_data || !gic_dist->enable || !is_enabled(gic_dist, irq, vcpu->vcpu_id)) {
         DDIST("IRQ not enabled (%d) on vcpu %d\n", irq, vcpu->vcpu_id);
         return -1;
     }
 
-    return 0;
+    if (is_pending(gic_dist, virq_data->virq, vcpu->vcpu_id)) {
+        return 0;
+    }
+
+    DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
+    set_pending(gic_dist, virq_data->virq, true, vcpu->vcpu_id);
+
+    /* Enqueueing an IRQ and dequeueing it right after makes little sense
+     * now, but in the future this is needed to support IRQ priorities.
+     */
+    int err = vgic_irq_enqueue(vgic, vcpu, virq_data);
+    if (err) {
+        ZF_LOGF("Failure enqueueing IRQ, increase MAX_IRQ_QUEUE_LEN");
+        return -1;
+    }
+
+    int idx = vgic_find_empty_list_reg(vgic, vcpu);
+    if (idx < 0) {
+        /* There were no empty list registers available, but that's not a big
+         * deal -- we have already enqueued this IRQ and eventually the vGIC
+         * maintenance code will load it to a list register from the queue.
+         */
+        return 0;
+    }
+
+    struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
+    assert(virq);
+
+    return vgic_vcpu_load_list_reg(vgic, vcpu, idx, virq);
 }
 
 static int vgic_dist_clr_pending_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
@@ -637,6 +617,7 @@ static int vgic_dist_clr_pending_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
     DDIST("clr pending irq %d\n", irq);
     set_pending(gic_dist, irq, false, vcpu->vcpu_id);
+    /* TODO: remove from IRQ queue and list registers as well */
     return 0;
 }
 
@@ -1178,6 +1159,8 @@ int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
         seL4_MessageInfo_t reply;
         reply = seL4_MessageInfo_new(0, 0, 0, 0);
         seL4_Reply(reply);
+    } else {
+        ZF_LOGF("vGIC maintenance handler failed (error %d)", err);
     }
     return VM_EXIT_HANDLED;
 }
