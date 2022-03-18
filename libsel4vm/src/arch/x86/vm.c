@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include <sel4/sel4.h>
-#include <sel4/messages.h>
 #include <platsupport/arch/tsc.h>
 #include <sel4/arch/vmenter.h>
 #include <vka/capops.h>
