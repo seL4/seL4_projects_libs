@@ -123,6 +123,9 @@ virtio_emul_t *virtio_emul_init(ps_io_ops_t io_ops, int queue_size, vm_t *vm, vo
     case VIRTIO_NET:
         emul->internal = net_virtio_emul_init(emul, io_ops, (ethif_driver_init)driver, config);
         break;
+    case VIRTIO_BLK:
+        emul->internal = blk_virtio_emul_init(emul, io_ops, (ethif_driver_init)driver, config);
+        break;
     }
     if (emul->internal == NULL) {
         return NULL;

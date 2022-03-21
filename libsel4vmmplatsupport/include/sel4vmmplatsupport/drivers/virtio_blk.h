@@ -37,6 +37,29 @@ typedef struct virtio_blk {
     ps_io_ops_t ioops;
 } virtio_blk_t;
 
+
+// TODO COURTNEY: This will be the emul driver
+struct blk_driver {
+    void *blk_data;
+    struct raw_iface_funcs i_fn;
+    struct raw_iface_callbacks i_cb;
+    void *cb_cookie;
+    ps_io_ops_t io_ops;
+    int dma_alignment; // TODO COURTNEY: Is this needed?
+};
+
+// TODO COURTNEY: This will be the emul_driver_funcs
+/* Structure defining the set of functions an ethernet driver
+ * must implement and expose */
+struct raw_iface_funcs {
+    ethif_raw_tx raw_tx;
+    ethif_raw_handleIRQ_t raw_handleIRQ;
+    ethif_raw_poll        raw_poll;
+    ethif_print_state_t print_state;
+    ethif_low_level_init_t low_level_init;
+    ethif_get_mac get_mac;
+};
+
 /***
  * @function common_make_virtio_blk(vm, pci, ioport, ioport_range,
  *  port_type, interrupt_pin, interrupt_line, backend)
@@ -44,28 +67,19 @@ typedef struct virtio_blk {
  *  starting at iobase and backend functions
  * specified by the raw_iface_funcs struct.
  * @param {vm_t *} vm                       A handle to the VM
- * @param {vmm_pci_space_t *} pci           PCI library instance to register virtio net device
+ * @param {vmm_pci_space_t *} pci           PCI library instance to register virtio blk device
  * @param {vmm_io_port_list_t *} ioport     IOPort library instance to register virtio blk ioport
  * @param {ioport_range_t} ioport_range     BAR port for front end emulation
  * @param {ioport_type_t} port_type         Type of ioport i.e. whether to alloc or use given range
  * @param {unsigned int} interrupt_pin      PCI interrupt pin e.g. INTA = 1, INTB = 2 ,...
- * @param {unsigned int} interrupt_line     PCI interrupt line for virtio net IRQS
- * @param {struct raw_iface_funcs} backend  Function pointers to backend implementation. Can be initialised by
- *                                          virtio_blk_default_backend for default methods.
+ * @param {unsigned int} interrupt_line     PCI interrupt line for virtio blk IRQS
+ * @param {struct raw_iface_funcs} backend  Function pointers to backend implementation. 
  * @return                                  Pointer to an initialised virtio_blk_t, NULL if error.
  */
-virtio_net_t *common_make_virtio_blk(vm_t *vm, vmm_pci_space_t *pci,
+virtio_blk_t *common_make_virtio_blk(vm_t *vm, vmm_pci_space_t *pci,
                                      vmm_io_port_list_t *ioport,
                                      ioport_range_t ioport_range,
                                      ioport_type_t port_type,
                                      unsigned int interrupt_pin,
                                      unsigned int interrupt_line,
                                      struct raw_iface_funcs backend);
-
-/***
- * @function virtio_blk_default_backend()
- * @return          A struct with a default virtio_blk backend. It is the
- *                  responsibility of the caller to
- *                  update these function pointers with its own custom backend.
- */
-struct raw_iface_funcs virtio_blk_default_backend(void);

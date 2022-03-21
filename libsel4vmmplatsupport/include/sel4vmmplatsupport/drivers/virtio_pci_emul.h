@@ -23,6 +23,7 @@
 typedef enum virtio_pci_devices {
     VIRTIO_NET,
     VIRTIO_CONSOLE,
+    VIRTIO_BLK,
 } virtio_pci_devices_t;
 
 typedef struct v_queue {
@@ -66,3 +67,5 @@ uint16_t ring_avail(virtio_emul_t *emul, struct vring *vring, uint16_t idx);
 void *net_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, ethif_driver_init driver, void *config);
 
 void *console_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, console_driver_init driver, void *config);
+
+void *blk_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, ethif_driver_init driver, void *config);

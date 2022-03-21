@@ -20,17 +20,39 @@
 
 static ps_io_ops_t ops;
 
+static int virtio_blk_io_in(void *cookie, unsigned int port_no, unsigned int size, unsigned int *result)
+{
+    virtio_blk_t *blk = (virtio_blk_t *)cookie;
+    unsigned int offset = port_no - blk->iobase;
+    unsigned int val;
+    int err = blk->emul->io_in(blk->emul, offset, size, &val);
+    if (err) {
+        return err;
+    }
+    *result = val;
+    return 0;
+}
+
+static int virtio_blk_io_out(void *cookie, unsigned int port_no, unsigned int size, unsigned int value)
+{
+    int ret;
+    virtio_blk_t *blk = (virtio_blk_t *)cookie;
+    unsigned int offset = port_no - blk->iobase;
+    ret = blk->emul->io_out(blk->emul, offset, size, value);
+    return ret;
+}
+
 static int emul_driver_init(struct blk_driver *driver,
                             ps_io_ops_t io_ops, void *config)
 {
-    virtio_blk_t *blk_p = (virtio_blk_t *)config;
-    driver->config = config;
+    virtio_blk_t *blk = (virtio_blk_t *)config;
+    driver->blk_data = config;
+    driver->dma_alignment = sizeof(uintptr_t);
     driver->i_fn = blk->emul_driver_funcs;
-    net->emul_driver = driver;
+    blk->emul_driver = driver;
     return 0;
 
 }
-
 
 static void *malloc_dma_alloc(void *cookie, size_t size, int align, int cached, ps_mem_flags_t flags)
 {
@@ -63,7 +85,7 @@ static void malloc_dma_cache_op(void *cookie, void *addr, size_t size, dma_cache
 }
 
 
-static vmm_pci_entry_t vmm_virtio_net_pci_bar(unsigned int iobase,
+static vmm_pci_entry_t vmm_virtio_blk_pci_bar(unsigned int iobase,
                                               size_t iobase_size_bits,
                                               unsigned int interrupt_pin,
                                               unsigned int interrupt_line)
@@ -103,7 +125,7 @@ static vmm_pci_entry_t vmm_virtio_net_pci_bar(unsigned int iobase,
     return vmm_pci_create_bar_emulation(entry, 1, bars);
 }
 
-virtio_net_t *common_make_virtio_net(vm_t *vm,
+virtio_blk_t *common_make_virtio_blk(vm_t *vm,
                                      vmm_pci_space_t *pci,
                                      vmm_io_port_list_t *ioport,
                                      ioport_range_t ioport_range,
@@ -117,7 +139,7 @@ virtio_net_t *common_make_virtio_net(vm_t *vm,
 
     virtio_blk_t *blk;
     err = ps_calloc(&ops.malloc_ops, 1, sizeof *blk, (void **)&blk);
-    ZF_LOGF_IF(err, "Failed to allocate virtio net");
+    ZF_LOGF_IF(err, "Failed to allocate virtio blk");
 
     ioport_interface_t virtio_io_interface = {blk, virtio_blk_io_in, virtio_blk_io_out, "VIRTIO PCI BLK"};
     ioport_entry_t *io_entry = vmm_io_port_add_handler(ioport, ioport_range, virtio_io_interface, port_type);
@@ -142,8 +164,8 @@ virtio_net_t *common_make_virtio_net(vm_t *vm,
         .dma_cache_op_fn = malloc_dma_cache_op
     };
 
-    net->emul_driver_funcs = backend;
-    net->emul = virtio_emul_init(ioops, QUEUE_SIZE, vm, emul_driver_init, net, VIRTIO_BLK);
+    blk->emul_driver_funcs = backend;
+    blk->emul = virtio_emul_init(ioops, QUEUE_SIZE, vm, emul_driver_init, blk, VIRTIO_BLK);
 
     assert(blk->emul);
     return blk;
