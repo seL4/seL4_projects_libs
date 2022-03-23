@@ -12,7 +12,6 @@
 #include "arch_fault.h"
 
 #include <sel4/sel4.h>
-#include <sel4/messages.h>
 #include <vka/capops.h>
 
 #include <utils/ansi.h>
