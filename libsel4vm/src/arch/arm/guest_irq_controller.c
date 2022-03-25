@@ -12,5 +12,14 @@ int vm_create_default_irq_controller(vm_t *vm)
         ZF_LOGE("Failed to initialise default irq controller: Invalid vm");
         return -1;
     }
-    return vm_install_vgic(vm);
+
+    #if defined(GIC_VERSION_2)
+        ZF_LOGE("Installing VGICv2");
+        return vm_install_vgic_v2(vm);
+    #elif defined(GIC_VERSION_3)
+        ZF_LOGE("Installing VGICv3");
+        return vm_install_vgic_v3(vm);
+    #else
+        #error "GIC version is not defined."
+    #endif
 }
