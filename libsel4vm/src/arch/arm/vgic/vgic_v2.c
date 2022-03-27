@@ -85,7 +85,7 @@ int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
     *slot = NULL;
     /* Clear pending */
     DIRQ("Maintenance IRQ %d\n", lr_virq->virq);
-    set_pending(gic_dist, lr_virq->virq, false, vcpu->vcpu_id);
+    set_pending(gic_dist, lr_virq->virq, false, vcpu);
     virq_ack(vcpu, lr_virq);
 
     /* Check the overflow list for pending IRQs */
@@ -296,3 +296,57 @@ const struct vgic_dist_device dev_vgic_dist = {
     .size = 0x1000,
     .vgic = NULL,
 };
+
+static char irq_ext[512];
+
+int retrigger_if_needed(vm_vcpu_t *vcpu, int irq)
+{
+    if (!irq_ext[irq]) {
+           return 0;
+    }
+
+    vgic_t *vgic = vgic_dist->vgic;
+    assert(vgic);
+
+    int err = vgic_dist_set_pending_irq(vgic, vcpu, irq);
+    if (err) {
+        ZF_LOGE("Failure retriggering irq %d\n", irq);
+    }
+
+    return err;
+}
+
+int irq_ext_modify(vm_vcpu_t *vcpu, unsigned int source, unsigned int irq, bool set)
+{
+    assert(source < 8);
+    assert(irq < 512);
+    if (!!(irq_ext[irq] & (1 << source)) == !!set) {
+        return 0;
+    }
+    if (set) {
+        irq_ext[irq] |= 1 << source;
+    } else {
+        irq_ext[irq] &= ~(1 << source);
+    }
+    if (irq_ext[irq] & ~(1 << source)) {
+        /* other sources active, this change does not have any effect */
+        return 0;
+    }
+
+    vgic_t *vgic = vgic_dist->vgic;
+    assert(vgic);
+
+    int err;
+    if (set) {
+        err = vgic_dist_set_pending_irq(vgic, vcpu, irq);
+    } else {
+        err = vgic_dist_clr_pending_irq(vgic, vcpu, irq);
+    }
+
+    if (err) {
+        ZF_LOGE("Failure %s pending IRQ %u from external source %u (error %d)",
+                set ? "setting" : "clearing", irq, source, err);
+    }
+
+    return err;
+}

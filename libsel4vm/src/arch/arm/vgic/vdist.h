@@ -26,6 +26,10 @@
 #define IRQ_IDX(irq) ((irq) / 32)
 #define IRQ_BIT(irq) (1U << ((irq) % 32))
 
+/* TODO: currently implemented in vgic_v2.c, probably a callback is more appropriate?
+ * Also use the "resampling" term as in KVM.
+ */
+int retrigger_if_needed(vm_vcpu_t *vcpu, int irq);
 
 static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
 {
@@ -49,13 +53,19 @@ static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, bool 
     }
 }
 
-static inline void set_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
+static inline void set_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, vm_vcpu_t *vcpu)
 {
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
-        set_sgi_ppi_pending(gic_dist, irq, set_pending, vcpu_id);
+        set_sgi_ppi_pending(gic_dist, irq, set_pending, vcpu->vcpu_id);
         return;
     }
     set_spi_pending(gic_dist, irq, set_pending);
+    if (!set_pending) {
+        int err = retrigger_if_needed(vcpu, irq);
+        if (err) {
+            ZF_LOGE("Failure retriggering IRQ %d (error %d)", irq, err);
+        }
+    }
 }
 
 static inline bool is_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
@@ -217,7 +227,7 @@ static int vgic_dist_set_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
     }
 
     DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
-    set_pending(vgic->dist, virq_data->virq, true, vcpu->vcpu_id);
+    set_pending(vgic->dist, virq_data->virq, true, vcpu);
 
     /* Enqueueing an IRQ and dequeueing it right after makes little sense
      * now, but in the future this is needed to support IRQ priorities.
@@ -249,7 +259,8 @@ static int vgic_dist_clr_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
     assert(vgic->dist);
 
     DDIST("clr pending irq %d\n", irq);
-    set_pending(vgic->dist, irq, false, vcpu->vcpu_id);
+    vgic_irq_remove(vgic, vcpu, irq);
+    set_pending(vgic->dist, irq, false, vcpu);
     /* TODO: remove from IRQ queue and list registers as well */
     return 0;
 }

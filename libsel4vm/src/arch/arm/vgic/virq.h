@@ -187,6 +187,24 @@ static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, vm_vcpu_t *vcpu
     return virq;
 }
 
+static inline void vgic_irq_remove(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
+{
+    vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
+    assert(vgic_vcpu);
+    struct irq_queue *q = &vgic_vcpu->irq_queue;
+
+    size_t tail = q->head;
+    for (size_t head = q->head; head != q->tail; head = IRQ_QUEUE_NEXT(head)) {
+        if (q->irqs[head]->virq == irq) {
+            continue;
+        }
+        q->irqs[tail] = q->irqs[head];
+        tail = IRQ_QUEUE_NEXT(tail);
+    }
+
+    q->tail = tail;
+}
+
 static inline int vgic_find_empty_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
