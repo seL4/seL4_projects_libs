@@ -294,9 +294,9 @@ static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d
     return vgic_device_get_vgic(d)->dist;
 }
 
-static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
+static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
 {
-    if (value) {
+    if (set_pending) {
         gic_dist->pending_set0[vcpu_id] |= IRQ_BIT(irq);
         gic_dist->pending_clr0[vcpu_id] |= IRQ_BIT(irq);
     } else {
@@ -305,9 +305,9 @@ static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, i
     }
 }
 
-static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, int value)
+static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending)
 {
-    if (value) {
+    if (set_pending) {
         gic_dist->pending_set[IRQ_IDX(irq)] |= IRQ_BIT(irq);
         gic_dist->pending_clr[IRQ_IDX(irq)] |= IRQ_BIT(irq);
     } else {
@@ -316,13 +316,13 @@ static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, int v
     }
 }
 
-static inline void set_pending(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
+static inline void set_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
 {
     if (irq < GIC_SPI_IRQ_MIN) {
-        set_sgi_ppi_pending(gic_dist, irq, value, vcpu_id);
+        set_sgi_ppi_pending(gic_dist, irq, set_pending, vcpu_id);
         return;
     }
-    set_spi_pending(gic_dist, irq, value);
+    set_spi_pending(gic_dist, irq, set_pending);
 }
 
 static inline bool is_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
@@ -344,9 +344,9 @@ static inline bool is_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_i
     return is_spi_pending(gic_dist, irq);
 }
 
-static inline void set_sgi_ppi_enable(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
+static inline void set_sgi_ppi_enable(struct gic_dist_map *gic_dist, int irq, bool set_enable, int vcpu_id)
 {
-    if (value) {
+    if (set_enable) {
         gic_dist->enable_set0[vcpu_id] |= IRQ_BIT(irq);
         gic_dist->enable_clr0[vcpu_id] |= IRQ_BIT(irq);
     } else {
@@ -355,9 +355,9 @@ static inline void set_sgi_ppi_enable(struct gic_dist_map *gic_dist, int irq, in
     }
 }
 
-static inline void set_spi_enable(struct gic_dist_map *gic_dist, int irq, int value)
+static inline void set_spi_enable(struct gic_dist_map *gic_dist, int irq, bool set_enable)
 {
-    if (value) {
+    if (set_enable) {
         gic_dist->enable_set[IRQ_IDX(irq)] |= IRQ_BIT(irq);
         gic_dist->enable_clr[IRQ_IDX(irq)] |= IRQ_BIT(irq);
     } else {
@@ -366,13 +366,13 @@ static inline void set_spi_enable(struct gic_dist_map *gic_dist, int irq, int va
     }
 }
 
-static inline void set_enable(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
+static inline void set_enable(struct gic_dist_map *gic_dist, int irq, bool set_enable, int vcpu_id)
 {
     if (irq < GIC_SPI_IRQ_MIN) {
-        set_sgi_ppi_enable(gic_dist, irq, value, vcpu_id);
+        set_sgi_ppi_enable(gic_dist, irq, set_enable, vcpu_id);
         return;
     }
-    set_spi_enable(gic_dist, irq, value);
+    set_spi_enable(gic_dist, irq, set_enable);
 }
 
 static inline bool is_sgi_ppi_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
@@ -393,31 +393,31 @@ static inline bool is_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_i
     return is_spi_enabled(gic_dist, irq);
 }
 
-static inline void set_sgi_ppi_active(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
+static inline void set_sgi_ppi_active(struct gic_dist_map *gic_dist, int irq, bool set_active, int vcpu_id)
 {
-    if (value) {
+    if (set_active) {
         gic_dist->active0[vcpu_id] |= IRQ_BIT(irq);
     } else {
         gic_dist->active0[vcpu_id] &= ~IRQ_BIT(irq);
     }
 }
 
-static inline void set_spi_active(struct gic_dist_map *gic_dist, int irq, int value)
+static inline void set_spi_active(struct gic_dist_map *gic_dist, int irq, bool set_active)
 {
-    if (value) {
+    if (set_active) {
         gic_dist->active[IRQ_IDX(irq)] |= IRQ_BIT(irq);
     } else {
         gic_dist->active[IRQ_IDX(irq)] &= ~IRQ_BIT(irq);
     }
 }
 
-static inline void set_active(struct gic_dist_map *gic_dist, int irq, int value, int vcpu_id)
+static inline void set_active(struct gic_dist_map *gic_dist, int irq, bool set_active, int vcpu_id)
 {
     if (irq < GIC_SPI_IRQ_MIN) {
-        set_sgi_ppi_active(gic_dist, irq, value, vcpu_id);
+        set_sgi_ppi_active(gic_dist, irq, set_active, vcpu_id);
         return;
     }
-    set_spi_active(gic_dist, irq, value);
+    set_spi_active(gic_dist, irq, set_active);
 }
 
 static inline bool is_sgi_ppi_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
