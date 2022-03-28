@@ -121,13 +121,11 @@
 #define IRQ_IDX(irq) ((irq) / 32)
 #define IRQ_BIT(irq) (1U << ((irq) % 32))
 
-struct virq_handle {
+typedef struct virq_handle {
     int virq;
     irq_ack_fn_t ack;
     void *token;
-};
-
-typedef struct virq_handle *virq_handle_t;
+} *virq_handle_t;
 
 static inline void virq_ack(vm_vcpu_t *vcpu, struct virq_handle *irq)
 {
