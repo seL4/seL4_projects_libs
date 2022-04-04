@@ -180,23 +180,22 @@ int vm_ram_find_largest_free_region(vm_t *vm, uintptr_t *addr, size_t *size)
 {
     vm_mem_t *guest_memory = &vm->mem;
     int largest = -1;
-    int i;
-    /* find a first region */
-    for (i = 0; i < guest_memory->num_ram_regions && largest == -1; i++) {
-        if (!guest_memory->ram_regions[i].allocated) {
+    size_t largest_size = 0;
+
+    /* find the largest unallocated region */
+    for (int i = 0; i < guest_memory->num_ram_regions; i++) {
+        if (!guest_memory->ram_regions[i].allocated &&
+            guest_memory->ram_regions[i].size > largest_size) {
             largest = i;
+            largest_size = guest_memory->ram_regions[i].size;
         }
     }
+
     if (largest == -1) {
         ZF_LOGE("Failed to find free region");
         return -1;
     }
-    for (i++; i < guest_memory->num_ram_regions; i++) {
-        if (!guest_memory->ram_regions[i].allocated &&
-            guest_memory->ram_regions[i].size > guest_memory->ram_regions[largest].size) {
-            largest = i;
-        }
-    }
+
     *addr = guest_memory->ram_regions[largest].start;
     *size = guest_memory->ram_regions[largest].size;
     return 0;
