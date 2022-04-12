@@ -86,7 +86,7 @@ static int emul_io_out(virtio_emul_t *emul, unsigned int offset, unsigned int si
         assert(size == 4);
         int queue = emul->virtq.queue;
         emul->virtq.queue_pfn[queue] = value;
-        vring_init(&emul->virtq.vring[queue], emul->virtq.queue_size[queue], (void *)(uintptr_t)(value << 12),
+        vring_init(&emul->virtq.vring[queue], emul->virtq.queue_size[queue], (void *)((uintptr_t)value << 12),
                    VIRTIO_PCI_VRING_ALIGN);
         break;
     }
