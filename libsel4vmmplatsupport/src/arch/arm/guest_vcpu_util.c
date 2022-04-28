@@ -110,5 +110,5 @@ int fdt_generate_plat_vcpu_node(vm_t *vm, void *fdt)
     if (vm->num_vcpus > 1) {
         ret = generate_psci_node(fdt, root_offset);
     }
-    return 0;
+    return ret;
 }
