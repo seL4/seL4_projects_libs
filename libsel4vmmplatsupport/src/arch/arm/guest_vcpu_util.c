@@ -71,7 +71,11 @@ static int generate_psci_node(void *fdt, int root_offset)
 {
     int psci_node = fdt_add_subnode(fdt, root_offset, "psci");
     if (psci_node < 0) {
-        return psci_node;
+        if (-FDT_ERR_EXISTS == psci_node) {
+            return 0;
+        } else {
+            return psci_node;
+        }
     }
     FDT_OP(fdt_appendprop_u32(fdt, psci_node, "cpu_off", 0x84000002));
     FDT_OP(fdt_appendprop_u32(fdt, psci_node, "cpu_on", 0xc4000003));
@@ -87,6 +91,7 @@ int fdt_generate_plat_vcpu_node(vm_t *vm, void *fdt)
     int root_offset = fdt_path_offset(fdt, "/");
     int cpu_node = fdt_add_subnode(fdt, root_offset, "cpus");
     if (cpu_node < 0) {
+        ZF_LOGE("Failed to create cpu node");
         return cpu_node;
     }
     FDT_OP(fdt_appendprop_u32(fdt, cpu_node, "#address-cells", 0x1));
@@ -97,6 +102,7 @@ int fdt_generate_plat_vcpu_node(vm_t *vm, void *fdt)
         snprintf(cpu_name, MAX_CPU_NAME_LENGTH, "cpu@%x", vcpu->vcpu_id);
         int sub_cpu_node = fdt_add_subnode(fdt, cpu_node, cpu_name);
         if (sub_cpu_node < 0) {
+            ZF_LOGE("Failed to create cpu@%x node", vcpu->vcpu_id);
             return sub_cpu_node;
         }
         FDT_OP(fdt_appendprop_string(fdt, sub_cpu_node, "device_type", "cpu"));
