@@ -100,7 +100,7 @@
 #define MAX_VIRQS   200
 #define NUM_SGI_VIRQS   16
 #define NUM_PPI_VIRQS   16
-#define GIC_SPI_IRQ_MIN      NUM_SGI_VIRQS + NUM_PPI_VIRQS
+#define GIC_SPI_IRQ_MIN      (NUM_SGI_VIRQS + NUM_PPI_VIRQS)
 
 /* GIC Distributor register access utilities */
 #define GIC_DIST_REGN(offset, reg) ((offset-reg)/sizeof(uint32_t))
