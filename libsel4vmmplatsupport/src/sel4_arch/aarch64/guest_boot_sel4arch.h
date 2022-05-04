@@ -6,13 +6,12 @@
 #pragma once
 
 #include <sel4/sel4.h>
-
-#define SPSR_EL1 0x5
+#include <sel4vm/sel4_arch/processor.h>
 
 static inline void sel4arch_set_bootargs(seL4_UserContext *regs, seL4_Word pc,
                                          seL4_Word mach_type, seL4_Word atags)
 {
     regs->x0 = atags;
     regs->pc = pc;
-    regs->spsr = SPSR_EL1;
+    regs->spsr = PMODE_EL1h;
 }
