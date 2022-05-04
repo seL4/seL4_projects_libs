@@ -22,18 +22,35 @@ The interface `guest_boot_init.h` defines the following functions.
 
 ### Function `vcpu_set_bootargs(vcpu, pc, mach_type, atags)`
 
-Set the boot args and pc for the VM.
-For linux:
-r0 -> 0
-r1 -> MACH_TYPE  (e.g #4151 for EXYNOS5410 eval. platform smdk5410)
-r2 -> atags/dtb address
+Set the boot args and pc for the VM. The Linux kernel documentation contains a detailed description about
+the boot ABI for [AARCH32](https://www.kernel.org/doc/Documentation/arm/Booting) and
+[AARCH64](https://www.kernel.org/doc/Documentation/arm64/booting.txt)
+
+The register setup for the booting core on AARCH32 is
+
+- `r0` = `0`
+- `r1` = `MACH_TYPE`
+- `r2` = ATAGS or FTD/DTB address
+
+For AARCH64 it is:
+
+- `x0` = FTD/DTB address
+- `x1` = `0`
+- `x2` = `0`
+- `x3` = `0`
+
+Passing a pointer to ATAGs is deprecated, modern kernels use a device tree that is passed as Flattened Device
+Tree (FDT), sometimes also called Device Tree Blob (DTB). The parameter `MACH_TYPE` contains a machine
+specific ID, various `MACH_TYPE_xxx` constants can be found in the
+[Linux Source code at `arch/arm/tools/mach-types`](https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/tree/arch/arm/tools/mach-types)
+FTDs usually contain all necessary information about the machine, so`-1` (`0xfff...fff`) can be passed.
 
 **Parameters:**
 
 - `vcpu {vm_vcpu_t *}`: A handle to the boot VCPU
 - `pc {seL4_Word}`: The initial PC for the VM
-- `mach_type {seL4_Word}`: Linux specific machine ID see http://www.arm.linux.org.uk/developer/machines/
-- `atags {seL4_Word}`: Linux specific IPA of atags. Can also be substituted with dtb address
+- `mach_type {seL4_Word}`: Linux specific machine ID
+- `atags {seL4_Word}`: Linux specific IPA of ATAGS or FTD/DTB address
 
 **Returns:**
 

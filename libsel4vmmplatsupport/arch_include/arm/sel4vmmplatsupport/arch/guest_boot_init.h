@@ -17,14 +17,19 @@
 /***
  * @function vcpu_set_bootargs(vcpu, pc, mach_type, atags)
  * Set the boot args and pc for the VM.
- * For linux:
- *   r0 -> 0
- *   r1 -> MACH_TYPE  (e.g #4151 for EXYNOS5410 eval. platform smdk5410)
- *   r2 -> atags/dtb address
+ * For Linux on AARCH32:
+ *   - r0 = 0
+ *   - r1 = MACH_TYPE
+ *   - r2 = ATAGS or FTD/DTB address
+* For Linux on AARCH64:
+ *   - x0 = FTD/DTB address
+ *   - x1 = 0
+ *   - x2 = 0
+ *   - x3 = 0
  * @param {vm_vcpu_t *} vcpu        A handle to the boot VCPU
  * @param {seL4_Word} pc            The initial PC for the VM
- * @param {seL4_Word} mach_type     Linux specific machine ID see http://www.arm.linux.org.uk/developer/machines/
- * @param {seL4_Word} atags         Linux specific IPA of atags. Can also be substituted with dtb address
+ * @param {seL4_Word} mach_type     Linux specific machine ID
+ * @param {seL4_Word} atags         Linux specific IPA of ATAGS or FTD/DTB
  * @return                          0 on success, otherwise -1 for failure
  */
 int vcpu_set_bootargs(vm_vcpu_t *vcpu, seL4_Word pc, seL4_Word mach_type, seL4_Word atags);
