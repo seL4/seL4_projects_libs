@@ -12,7 +12,7 @@
 
 int vcpu_set_bootargs(vm_vcpu_t *vcpu, seL4_Word pc, seL4_Word mach_type, seL4_Word atags)
 {
-    seL4_UserContext regs;
+    seL4_UserContext regs = {0};
     if (!vcpu) {
         ZF_LOGE("Failed to set bootargs: NULL VCPU handle");
         return -1;
