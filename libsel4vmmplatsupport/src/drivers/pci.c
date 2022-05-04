@@ -58,7 +58,7 @@ int vmm_pci_add_entry(vmm_pci_space_t *space, vmm_pci_entry_t entry, vmm_pci_add
             space->bus0[i][0] = calloc(1, sizeof(entry));
 
             *space->bus0[i][0] = entry;
-            /* Report addr if reqeusted */
+            /* Report addr if requested */
             if (addr) {
                 *addr = (vmm_pci_address_t) {
                     .bus = 0, .dev = i, .fun = 0
