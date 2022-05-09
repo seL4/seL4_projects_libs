@@ -551,7 +551,7 @@ static int vgic_dist_disable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, in
 {
     /* STATE g) */
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
-    if (irq >= 16) {
+    if (irq >= NUM_SGI_VIRQS) {
         DDIST("disabling irq %d\n", irq);
         set_enable(gic_dist, irq, false, vcpu->vcpu_id);
     }
