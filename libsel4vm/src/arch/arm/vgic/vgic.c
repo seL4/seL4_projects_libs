@@ -551,6 +551,13 @@ static int vgic_dist_disable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, in
 {
     /* STATE g) */
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
+
+    /* It is IMPLEMENTATION DEFINED if a GIC allows disabling SGIs. Our vGIC
+     * implementation does not allows it, such requests are simply ignored.
+     * Since it is not uncommon that a guest OS tries disabling SGIs, e.g. as
+     * part of the platform initialization, no dedicated messages are logged
+     * here to avoid bloating the logs.
+     */
     if (irq >= NUM_SGI_VIRQS) {
         DDIST("disabling irq %d\n", irq);
         set_enable(gic_dist, irq, false, vcpu->vcpu_id);
