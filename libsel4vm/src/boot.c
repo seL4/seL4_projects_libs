@@ -59,6 +59,7 @@ int vm_init(vm_t *vm, vka_t *vka, simple_t *host_simple, vspace_t host_vspace,
 vm_vcpu_t *vm_create_vcpu(vm_t *vm, int priority)
 {
     int err;
+    char thread_name[32];
     if (vm->num_vcpus >= CONFIG_MAX_NUM_NODES) {
         ZF_LOGE("Failed to create vcpu, reached maximum number of support vcpus");
         return NULL;
@@ -76,6 +77,9 @@ vm_vcpu_t *vm_create_vcpu(vm_t *vm, int priority)
     vcpu_new->target_cpu = -1;
     err = vm_create_vcpu_arch(vm, vcpu_new);
     assert(!err);
+    sprintf(thread_name, "%s:vcpu%u", vm->vm_name, vcpu_new->vcpu_id);
+    seL4_DebugNameThread(vcpu_new->tcb.tcb.cptr, thread_name);
+
     vm->vcpus[vm->num_vcpus] = vcpu_new;
     vm->num_vcpus++;
     return vcpu_new;
