@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <autoconf.h>
+#include <sel4vm/gen_config.h>
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -166,12 +169,14 @@ int vm_ram_touch(vm_t *vm, uintptr_t addr, size_t size, ram_touch_callback_fn to
         uintptr_t current_aligned = PAGE_ALIGN_4K(current_addr);
         uintptr_t next_page_start = current_aligned + PAGE_SIZE_4K;
 
+#ifdef CONFIG_LIB_VM_ALIGN_LP_HACK
         /* user-VM resides at 0x48000000 - 0x4fffffff */
         if (current_addr >= 0x48000000 && current_addr < 0x50000000) {
             sz = seL4_LargePageBits;
             current_aligned = PAGE_ALIGN_2M(current_addr);
             next_page_start = current_aligned + PAGE_SIZE_2M;
         }
+#endif
 
         next_addr = MIN(end_addr, next_page_start);
         access_cookie.size = next_addr - current_addr;

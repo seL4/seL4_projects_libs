@@ -38,7 +38,16 @@ config_string(
     "LibSel4VMVMXTimerDebug"
 )
 
-mark_as_advanced(LibSel4VMDeferMemoryMap LibSel4VMVMXTimerDebug LibSel4VMVMXTimerTimeout)
+config_option(
+    LibSel4VMAlignLPHack
+    LIB_VM_ALIGN_LP_HACK
+    "Temporary hack to have 2M aligned access to guest memory"
+    DEFAULT
+    OFF
+)
+
+mark_as_advanced(LibSel4VMDeferMemoryMap LibSel4VMVMXTimerDebug
+    LibSel4VMVMXTimerTimeout LibSel4VMAlignLPHack)
 
 add_config_library(sel4vm "${configure_string}")
 
