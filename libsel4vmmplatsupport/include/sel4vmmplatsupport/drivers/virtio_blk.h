@@ -23,6 +23,6 @@ typedef struct virtio_blk {
 virtio_blk_t *common_make_virtio_blk(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port_list_t *ioport,
                                      ioport_range_t ioport_range, ioport_type_t port_type,
                                      unsigned int interrupt_pin, unsigned int interrupt_line,
-                                     raw_diskiface_funcs_t backend, bool emulate_bar_access);
+                                     raw_diskiface_funcs_t backend);
 
 raw_diskiface_funcs_t virtio_blk_default_backend(void);

@@ -83,8 +83,7 @@ static void malloc_dma_cache_op(void *cookie, void *addr, size_t size, dma_cache
 }
 
 static vmm_pci_entry_t vmm_virtio_blk_pci_bar(unsigned int iobase, size_t iobase_size_bits,
-                                              unsigned int interrupt_pin, unsigned int interrupt_line,
-                                              bool emulate_bar_access)
+                                              unsigned int interrupt_pin, unsigned int interrupt_line)
 {
     vmm_pci_device_def_t *pci_config;
     int err = ps_calloc(&ops.malloc_ops, 1, sizeof(*pci_config), (void **) &pci_config);
@@ -118,18 +117,15 @@ static vmm_pci_entry_t vmm_virtio_blk_pci_bar(unsigned int iobase, size_t iobase
         }
     };
     vmm_pci_entry_t virtio_pci_bar;
-    if (emulate_bar_access) {
-        virtio_pci_bar = vmm_pci_create_bar_emulation(entry, 1, bars);
-    } else {
-        virtio_pci_bar = vmm_pci_create_passthrough_bar_emulation(entry, 1, bars);
-    }
+    virtio_pci_bar = vmm_pci_create_bar_emulation(entry, 1, bars);
+
     return virtio_pci_bar;
 }
 
 virtio_blk_t *common_make_virtio_blk(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port_list_t *ioport,
                                      ioport_range_t ioport_range, ioport_type_t port_type,
                                      unsigned int interrupt_pin, unsigned int interrupt_line,
-                                     raw_diskiface_funcs_t backend, bool emulate_bar_access)
+                                     raw_diskiface_funcs_t backend)
 {
     int err = ps_new_stdlib_malloc_ops(&ops.malloc_ops);
     ZF_LOGF_IF(err, "Failed to get malloc ops");
@@ -150,8 +146,7 @@ virtio_blk_t *common_make_virtio_blk(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port
     ZF_LOGE("iobase_size_bits = %zu", iobase_size_bits);
 
     vmm_pci_entry_t entry = vmm_virtio_blk_pci_bar(io_entry->range.start, iobase_size_bits,
-                                                   interrupt_pin, interrupt_line,
-                                                   emulate_bar_access);
+                                                   interrupt_pin, interrupt_line);
     vmm_pci_add_entry(pci, entry, NULL);
 
     ps_io_ops_t ioops;
