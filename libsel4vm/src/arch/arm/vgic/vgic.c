@@ -539,7 +539,7 @@ static int vgic_dist_disable(struct vgic_dist_device *d, vm_t *vm)
     return 0;
 }
 
-static int vgic_dist_enable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
+static void vgic_dist_enable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
 {
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
     vgic_t *vgic = vgic_device_get_vgic(d);
@@ -554,10 +554,9 @@ static int vgic_dist_enable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int
     } else {
         DDIST("enabled irq %d has no handle", irq);
     }
-    return 0;
 }
 
-static int vgic_dist_disable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
+static void vgic_dist_disable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
 {
     /* STATE g) */
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
@@ -572,7 +571,6 @@ static int vgic_dist_disable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, in
         DDIST("disabling irq %d\n", irq);
         set_enable(gic_dist, irq, false, vcpu->vcpu_id);
     }
-    return 0;
 }
 
 static int vgic_dist_set_pending_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int irq)
