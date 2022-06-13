@@ -860,7 +860,7 @@ static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *v
             int irq;
             irq = CTZ(data);
             data &= ~(1U << irq);
-            irq += (offset - 0x280) * 8;
+            irq += (offset - GIC_DIST_ICPENDR0) * 8;
             vgic_dist_clr_pending_irq(d, vcpu, irq);
         }
         break;
