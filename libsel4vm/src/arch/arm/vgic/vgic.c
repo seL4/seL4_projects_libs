@@ -627,7 +627,6 @@ static memory_fault_result_t handle_vgic_dist_read_fault(vm_t *vm, vm_vcpu_t *vc
     struct vgic_dist_device *d = (struct vgic_dist_device *)cookie;
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
     int offset = fault_get_address(fault) - d->pstart;
-    int vcpu_id = vcpu->vcpu_id;
     uint32_t reg = 0;
     int reg_offset = 0;
     uintptr_t base_reg;
@@ -782,7 +781,6 @@ static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *v
     struct vgic_dist_device *d = (struct vgic_dist_device *)cookie;
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
     int offset = fault_get_address(fault) - d->pstart;
-    int vcpu_id = vcpu->vcpu_id;
     uint32_t reg = 0;
     uint32_t mask = fault_get_data_mask(fault);
     uint32_t reg_offset = 0;
