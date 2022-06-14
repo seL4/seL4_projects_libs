@@ -97,10 +97,22 @@
 #define GIC_VCPU_PADDR       (GIC_PADDR + 0x6000)
 #endif
 
-#define MAX_VIRQS   200
-#define NUM_SGI_VIRQS   16
-#define NUM_PPI_VIRQS   16
-#define GIC_SPI_IRQ_MIN      (NUM_SGI_VIRQS + NUM_PPI_VIRQS)
+/* The ARM GIC architecture defines 16 SGIs (0 - 7 is recommended for non-secure
+ * state, 8 - 15 for secure state), 16 PPIs (interrupt 16 - 31) and 988 SPIs
+ * (32 - 1019). The interrupt IDs 1020 - 1023 are used for special purposes.
+ * GICv3.1 is not implemented here, it supports 64 additional PPIs (interrupt
+ * 1056 - 1119) and 1024 SPIs (interrupt 4096 – 5119). LPIs starting at
+ * interrupt 8192 are also not implemented here.
+ */
+#define NUM_SGI_VIRQS           16   // vCPU local SGI interrupts
+#define NUM_PPI_VIRQS           16   // vCPU local PPI interrupts
+#define NUM_VCPU_LOCAL_VIRQS    (NUM_SGI_VIRQS + NUM_PPI_VIRQS)
+
+/* Usually, VMs do not use all SPIs. To reduce the memory footprint, our vGIC
+ * implementation manages the SPIs in a fixed size slot list. 200 entries have
+ * been good trade-off that is sufficient for most systems.
+ */
+#define NUM_SLOTS_SPI_VIRQ      200
 
 /* GIC Distributor register access utilities */
 #define GIC_DIST_REGN(offset, reg) ((offset-reg)/sizeof(uint32_t))
@@ -200,8 +212,8 @@ typedef struct vgic {
 /// IRQs that would not fit in the vcpu list registers
     struct irq_queue irq_queue[CONFIG_MAX_NUM_NODES];
 /// Complete set of virtual irqs
-    struct virq_handle *sgi_ppi_irq[CONFIG_MAX_NUM_NODES][NUM_SGI_VIRQS + NUM_PPI_VIRQS];
-    struct virq_handle *virqs[MAX_VIRQS];
+    struct virq_handle *sgi_ppi_irq[CONFIG_MAX_NUM_NODES][NUM_VCPU_LOCAL_VIRQS];
+    struct virq_handle *virqs[NUM_SLOTS_SPI_VIRQ];
 /// Virtual distributor registers
     struct gic_dist_map *dist;
 } vgic_t;
@@ -216,7 +228,7 @@ static struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, vm_vcpu_t *vcpu, int v
 
 static struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int virq)
 {
-    for (int i = 0; i < MAX_VIRQS; i++) {
+    for (int i = 0; i < ARRAY_SIZE(vgic->virqs); i++) {
         if (vgic->virqs[i] && vgic->virqs[i]->virq == virq) {
             return vgic->virqs[i];
         }
@@ -226,7 +238,7 @@ static struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int virq)
 
 static struct virq_handle *virq_find_irq_data(struct vgic *vgic, vm_vcpu_t *vcpu, int virq)
 {
-    if (virq < GIC_SPI_IRQ_MIN)  {
+    if (virq < NUM_VCPU_LOCAL_VIRQS)  {
         return virq_get_sgi_ppi(vgic, vcpu, virq);
     }
     return virq_find_spi_irq_data(vgic, virq);
@@ -234,7 +246,7 @@ static struct virq_handle *virq_find_irq_data(struct vgic *vgic, vm_vcpu_t *vcpu
 
 static int virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
 {
-    for (int i = 0; i < MAX_VIRQS; i++) {
+    for (int i = 0; i < ARRAY_SIZE(vgic->virqs); i++) {
         if (vgic->virqs[i] == NULL) {
             vgic->virqs[i] = virq_data;
             return 0;
@@ -256,7 +268,7 @@ static int virq_sgi_ppi_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *v
 static int virq_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *virq_data)
 {
     int virq = virq_data->virq;
-    if (virq < GIC_SPI_IRQ_MIN) {
+    if (virq < NUM_VCPU_LOCAL_VIRQS) {
         return virq_sgi_ppi_add(vcpu, vgic, virq_data);
     }
     return virq_spi_add(vgic, virq_data);
@@ -318,7 +330,7 @@ static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, bool 
 
 static inline void set_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
 {
-    if (irq < GIC_SPI_IRQ_MIN) {
+    if (irq < NUM_VCPU_LOCAL_VIRQS) {
         set_sgi_ppi_pending(gic_dist, irq, set_pending, vcpu_id);
         return;
     }
@@ -337,7 +349,7 @@ static inline bool is_spi_pending(struct gic_dist_map *gic_dist, int irq)
 
 static inline bool is_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
-    if (irq < GIC_SPI_IRQ_MIN) {
+    if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_pending(gic_dist, irq, vcpu_id);
 
     }
@@ -368,7 +380,7 @@ static inline void set_spi_enable(struct gic_dist_map *gic_dist, int irq, bool s
 
 static inline void set_enable(struct gic_dist_map *gic_dist, int irq, bool set_enable, int vcpu_id)
 {
-    if (irq < GIC_SPI_IRQ_MIN) {
+    if (irq < NUM_VCPU_LOCAL_VIRQS) {
         set_sgi_ppi_enable(gic_dist, irq, set_enable, vcpu_id);
         return;
     }
@@ -387,7 +399,7 @@ static inline bool is_spi_enabled(struct gic_dist_map *gic_dist, int irq)
 
 static inline bool is_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
-    if (irq < GIC_SPI_IRQ_MIN) {
+    if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_enabled(gic_dist, irq, vcpu_id);
     }
     return is_spi_enabled(gic_dist, irq);
@@ -413,7 +425,7 @@ static inline void set_spi_active(struct gic_dist_map *gic_dist, int irq, bool s
 
 static inline void set_active(struct gic_dist_map *gic_dist, int irq, bool set_active, int vcpu_id)
 {
-    if (irq < GIC_SPI_IRQ_MIN) {
+    if (irq < NUM_VCPU_LOCAL_VIRQS) {
         set_sgi_ppi_active(gic_dist, irq, set_active, vcpu_id);
         return;
     }
@@ -432,7 +444,7 @@ static inline bool is_spi_active(struct gic_dist_map *gic_dist, int irq)
 
 static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
-    if (irq < GIC_SPI_IRQ_MIN) {
+    if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_active(gic_dist, irq, vcpu_id);
     }
     return is_spi_active(gic_dist, irq);
