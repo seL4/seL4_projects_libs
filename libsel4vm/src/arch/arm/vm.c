@@ -31,6 +31,7 @@ static int vm_user_exception_handler(vm_vcpu_t *vcpu);
 static int vm_vcpu_handler(vm_vcpu_t *vcpu);
 static int vm_unknown_exit_handler(vm_vcpu_t *vcpu);
 static int vm_vppi_event_handler(vm_vcpu_t *vcpu);
+static int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu);
 
 static vm_exit_handler_fn_t arm_exit_handlers[] = {
     [VM_GUEST_ABORT_EXIT] = vm_guest_mem_abort_handler,
@@ -105,6 +106,18 @@ static int vm_vppi_event_handler(vm_vcpu_t *vcpu)
     reply = seL4_MessageInfo_new(0, 0, 0, 0);
     seL4_Reply(reply);
     return 0;
+}
+
+static int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
+{
+    int lr_idx = seL4_GetMR(0);
+    int err = vm_vgic_maintenance(vcpu, lr_idx);
+    if (err) {
+        ZF_LOGE("vGIC maintenance failed for LR[%d], error %d", lr_idx, err);
+        return VM_EXIT_HANDLE_ERROR;
+    }
+    seL4_Reply(seL4_MessageInfo_new(0, 0, 0, 0));
+    return VM_EXIT_HANDLED;
 }
 
 static int vm_user_exception_handler(vm_vcpu_t *vcpu)

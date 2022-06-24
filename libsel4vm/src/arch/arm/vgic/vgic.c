@@ -489,30 +489,6 @@ static int vgic_vcpu_load_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu, int idx, struc
     return 0;
 }
 
-int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
-{
-    /* STATE d) */
-    assert(vgic_dist);
-    struct gic_dist_map *gic_dist = vgic_priv_get_dist(vgic_dist);
-    vgic_t *vgic = vgic_device_get_vgic(vgic_dist);
-    struct virq_handle **lr_shadow = vgic->lr_shadow[vcpu->vcpu_id];
-    assert(lr_shadow[idx]);
-
-    /* Clear pending */
-    DIRQ("Maintenance IRQ %d\n", lr_shadow[idx]->virq);
-    set_pending(gic_dist, lr_shadow[idx]->virq, false, vcpu->vcpu_id);
-    virq_ack(vcpu, lr_shadow[idx]);
-    lr_shadow[idx] = NULL;
-
-    /* Check the overflow list for pending IRQs */
-    struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
-    if (virq) {
-        return vgic_vcpu_load_list_reg(vgic, vcpu, idx, virq);
-    }
-
-    return 0;
-}
-
 static int vgic_dist_enable(struct vgic_dist_device *d, vm_t *vm)
 {
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
@@ -1130,21 +1106,34 @@ int vm_install_vgic(vm_t *vm)
     return 0;
 }
 
-int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
+int vm_vgic_maintenance(vm_vcpu_t *vcpu, int lr_idx)
 {
-    int idx = seL4_GetMR(seL4_UnknownSyscall_ARG0);
     /* Currently not handling spurious IRQs */
-    assert(idx >= 0);
+    assert(lr_idx >= 0);
 
-    int err = handle_vgic_maintenance(vcpu, idx);
-    if (!err) {
-        seL4_MessageInfo_t reply;
-        reply = seL4_MessageInfo_new(0, 0, 0, 0);
-        seL4_Reply(reply);
-    } else {
-        ZF_LOGF("vGIC maintenance handler failed (error %d)", err);
+    /* STATE d) */
+    assert(vgic_dist);
+    struct gic_dist_map *gic_dist = vgic_priv_get_dist(vgic_dist);
+    vgic_t *vgic = vgic_device_get_vgic(vgic_dist);
+    struct virq_handle **lr_shadow = vgic->lr_shadow[vcpu->vcpu_id];
+    assert(lr_shadow[lr_idx]);
+
+    /* Clear pending */
+    DIRQ("Maintenance on LR[%d] holding IRQ %d\n", lr_idx, lr_shadow[lr_idx]->virq);
+    set_pending(gic_dist, lr_shadow[lr_idx]->virq, false, vcpu->vcpu_id);
+    virq_ack(vcpu, lr_shadow[lr_idx]);
+    lr_shadow[lr_idx] = NULL;
+
+    /* Check the overflow list for pending IRQs */
+    struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
+    if (virq) {
+        int err = vgic_vcpu_load_list_reg(vgic, vcpu, lr_idx, virq);
+        if (err) {
+            ZF_LOGE("vGIC maintenance handler failed (error %d)", err);
+            return -1;
+        }
     }
-    return VM_EXIT_HANDLED;
+    return 0;
 }
 
 const struct vgic_dist_device dev_vgic_dist = {
