@@ -71,19 +71,6 @@ static int vm_decode_exit(seL4_Word label)
     return exit_reason;
 }
 
-static int handle_exception(vm_vcpu_t *vcpu, seL4_Word ip)
-{
-    seL4_UserContext regs;
-    seL4_CPtr tcb = vm_get_vcpu_tcb(vcpu);
-    int err;
-    ZF_LOGE("%sInvalid instruction from [%s] at PC: 0x"XFMT"%s\n",
-            ANSI_COLOR(RED, BOLD), vcpu->vm->vm_name, seL4_GetMR(0), ANSI_COLOR(RESET));
-    err = seL4_TCB_ReadRegisters(tcb, false, 0, sizeof(regs) / sizeof(regs.pc), &regs);
-    assert(!err);
-    print_ctx_regs(&regs);
-    return VM_EXIT_HANDLED;
-}
-
 static int vm_vppi_event_handler(vm_vcpu_t *vcpu)
 {
     int err;
@@ -109,16 +96,21 @@ static int vm_vppi_event_handler(vm_vcpu_t *vcpu)
 
 static int vm_user_exception_handler(vm_vcpu_t *vcpu)
 {
-    seL4_Word ip;
-    int err;
-    ip = seL4_GetMR(0);
-    err = handle_exception(vcpu, ip);
-    assert(!err);
-    if (!err) {
-        seL4_MessageInfo_t reply;
-        reply = seL4_MessageInfo_new(0, 0, 0, 0);
-        seL4_Reply(reply);
+    seL4_Word ip = seL4_GetMR(0);
+    ZF_LOGE("%sInvalid instruction fault in VM '%s' on vCPU %d at PC 0x"SEL4_PRIx_word"%s",
+            ANSI_COLOR(RED, BOLD), vcpu->vm->vm_name, vcpu->vcpu_id, ip, ANSI_COLOR(RESET));
+
+    /* Dump registers */
+    seL4_UserContext regs;
+    seL4_Error ret = seL4_TCB_ReadRegisters(vm_get_vcpu_tcb(vcpu), false, 0,
+                                            sizeof(regs) / sizeof(regs.pc), &regs);
+    if (ret != seL4_NoError) {
+        ZF_LOGE("Failure reading regs, error %d", ret);
+    } else {
+        print_ctx_regs(&regs);
     }
+
+    seL4_Reply(seL4_MessageInfo_new(0, 0, 0, 0));
     return VM_EXIT_HANDLED;
 }
 
