@@ -782,6 +782,11 @@ fault_return:
     return FAULT_HANDLED;
 }
 
+static inline void emulate_reg_write_access(uint32_t *vreg, fault_t *fault)
+{
+    *vreg = fault_emulate(fault, *vreg);
+}
+
 static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t fault_addr,
                                                           size_t fault_length,
                                                           void *cookie)
@@ -820,11 +825,11 @@ static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *v
         /* Reserved */
         break;
     case RANGE32(GIC_DIST_IGROUPR0, GIC_DIST_IGROUPR0):
-        gic_dist->irq_group0[vcpu->vcpu_id] = fault_emulate(fault, gic_dist->irq_group0[vcpu->vcpu_id]);
+        emulate_reg_write_access(&gic_dist->irq_group0[vcpu->vcpu_id], fault);
         break;
     case RANGE32(GIC_DIST_IGROUPR1, GIC_DIST_IGROUPRN):
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_IGROUPR1);
-        gic_dist->irq_group[reg_offset] = fault_emulate(fault, gic_dist->irq_group[reg_offset]);
+        emulate_reg_write_access(&gic_dist->irq_group[reg_offset], fault);
         break;
     case RANGE32(GIC_DIST_ISENABLER0, GIC_DIST_ISENABLERN):
         data = fault_get_data(fault);
@@ -875,18 +880,18 @@ static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *v
         }
         break;
     case RANGE32(GIC_DIST_ISACTIVER0, GIC_DIST_ISACTIVER0):
-        gic_dist->active0[vcpu->vcpu_id] = fault_emulate(fault, gic_dist->active0[vcpu->vcpu_id]);
+        emulate_reg_write_access(&gic_dist->active0[vcpu->vcpu_id], fault);
         break;
     case RANGE32(GIC_DIST_ISACTIVER1, GIC_DIST_ISACTIVERN):
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ISACTIVER1);
-        gic_dist->active[reg_offset] = fault_emulate(fault, gic_dist->active[reg_offset]);
+        emulate_reg_write_access(&gic_dist->active[reg_offset], fault);
         break;
     case RANGE32(GIC_DIST_ICACTIVER0, GIC_DIST_ICACTIVER0):
-        gic_dist->active_clr0[vcpu->vcpu_id] = fault_emulate(fault, gic_dist->active_clr0[vcpu->vcpu_id]);
+        emulate_reg_write_access(&gic_dist->active_clr0[vcpu->vcpu_id], fault);
         break;
     case RANGE32(GIC_DIST_ICACTIVER1, GIC_DIST_ICACTIVERN):
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICACTIVER1);
-        gic_dist->active_clr[reg_offset] = fault_emulate(fault, gic_dist->active_clr[reg_offset]);
+        emulate_reg_write_access(&gic_dist->active_clr[reg_offset], fault);
         break;
     case RANGE32(GIC_DIST_IPRIORITYR0, GIC_DIST_IPRIORITYRN):
         break;
