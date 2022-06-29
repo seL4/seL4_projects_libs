@@ -1131,8 +1131,8 @@ int vm_install_vgic(vm_t *vm)
     vgic_dist_reset(vgic_dist);
 
     /* Remap VCPU to CPU */
-    vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR,
-                                                                          0x1000, handle_vgic_vcpu_fault, NULL);
+    vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR, PAGE_SIZE_4K,
+                                                                          handle_vgic_vcpu_fault, NULL);
     int err = vm_map_reservation(vm, vgic_vcpu_reservation, vgic_vcpu_iterator, (void *)vm);
     if (err) {
         free(vgic_dist->priv);
