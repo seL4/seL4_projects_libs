@@ -882,7 +882,7 @@ static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *v
         gic_dist->active[reg_offset] = fault_emulate(fault, gic_dist->active[reg_offset]);
         break;
     case RANGE32(GIC_DIST_ICACTIVER0, GIC_DIST_ICACTIVER0):
-        gic_dist->active_clr0[vcpu->vcpu_id] = fault_emulate(fault, gic_dist->active0[vcpu->vcpu_id]);
+        gic_dist->active_clr0[vcpu->vcpu_id] = fault_emulate(fault, gic_dist->active_clr0[vcpu->vcpu_id]);
         break;
     case RANGE32(GIC_DIST_ICACTIVER1, GIC_DIST_ICACTIVERN):
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICACTIVER1);
