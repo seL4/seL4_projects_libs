@@ -181,7 +181,7 @@ struct gic_dist_map {
  * of LR indexes.
  */
 #define NUM_LIST_REGS 4
-/* This is a rather abritrary number, increase if needed. */
+/* This is a rather arbitrary number, increase if needed. */
 #define MAX_IRQ_QUEUE_LEN 64
 #define IRQ_QUEUE_NEXT(_i) (((_i) + 1) & (MAX_IRQ_QUEUE_LEN - 1))
 
