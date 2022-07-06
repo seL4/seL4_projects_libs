@@ -633,15 +633,13 @@ static int vgic_dist_clr_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
     return 0;
 }
 
-static memory_fault_result_t handle_vgic_dist_read_fault(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t fault_addr,
-                                                         size_t fault_length,
-                                                         void *cookie)
+static memory_fault_result_t vgic_dist_reg_read(vm_t *vm, vm_vcpu_t *vcpu,
+                                                vgic_t *vgic, seL4_Word offset)
 {
     int err = 0;
     fault_t *fault = vcpu->vcpu_arch.fault;
-    struct vgic_dist_device *d = (struct vgic_dist_device *)cookie;
-    struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
-    int offset = fault_get_address(fault) - d->pstart;
+    assert(vgic->dist);
+    struct gic_dist_map *gic_dist = vgic->dist;
     uint32_t reg = 0;
     int reg_offset = 0;
     uintptr_t base_reg;
@@ -792,16 +790,13 @@ static inline void emulate_reg_write_access(uint32_t *vreg, fault_t *fault)
     *vreg = fault_emulate(fault, *vreg);
 }
 
-static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t fault_addr,
-                                                          size_t fault_length,
-                                                          void *cookie)
+static memory_fault_result_t vgic_dist_reg_write(vm_t *vm, vm_vcpu_t *vcpu,
+                                                 vgic_t *vgic, seL4_Word offset)
 {
     int err = 0;
     fault_t *fault = vcpu->vcpu_arch.fault;
-    struct vgic_dist_device *d = (struct vgic_dist_device *)cookie;
-    vgic_t *vgic = vgic_device_get_vgic(d);
-    struct gic_dist_map *gic_dist = vgic_priv_get_dist(d);
-    int offset = fault_get_address(fault) - d->pstart;
+    assert(vgic->dist);
+    struct gic_dist_map *gic_dist = vgic->dist;
     uint32_t reg = 0;
     uint32_t mask = fault_get_data_mask(fault);
     uint32_t reg_offset = 0;
@@ -974,10 +969,25 @@ static memory_fault_result_t handle_vgic_dist_fault(vm_t *vm, vm_vcpu_t *vcpu, u
                                                     size_t fault_length,
                                                     void *cookie)
 {
-    if (fault_is_read(vcpu->vcpu_arch.fault)) {
-        return handle_vgic_dist_read_fault(vm, vcpu, fault_addr, fault_length, cookie);
-    }
-    return handle_vgic_dist_write_fault(vm, vcpu, fault_addr, fault_length, cookie);
+    /* There is a fault object per vcpu with much more context, the parameters
+     * fault_addr and fault_length are no longer used.
+     */
+    fault_t *fault = vcpu->vcpu_arch.fault;
+    assert(fault);
+    assert(fault_addr == fault_get_address(vcpu->vcpu_arch.fault));
+
+    assert(cookie);
+    struct vgic_dist_device *d = (typeof(d))cookie;
+    vgic_t *vgic = vgic_device_get_vgic(d);
+    assert(vgic->dist);
+
+    seL4_Word addr = fault_get_address(fault);
+    assert(addr >= d->pstart);
+    seL4_Word offset = addr - d->pstart;
+    assert(offset < PAGE_SIZE_4K);
+
+    return fault_is_read(fault) ? vgic_dist_reg_read(vm, vcpu, vgic, offset)
+           : vgic_dist_reg_write(vm, vcpu, vgic, offset);
 }
 
 static void vgic_dist_reset(struct vgic_dist_device *d)
