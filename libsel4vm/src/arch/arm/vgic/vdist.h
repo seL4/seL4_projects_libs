@@ -240,7 +240,7 @@ static int vgic_dist_set_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
     struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
     assert(virq);
 
-    return vgic_vcpu_load_list_reg(vgic, vcpu, idx, virq);
+    return vgic_vcpu_load_list_reg(vgic, vcpu, idx, 0, virq);
 }
 
 static int vgic_dist_clr_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)

@@ -91,7 +91,7 @@ int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
     /* Check the overflow list for pending IRQs */
     struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
     if (virq) {
-        return vgic_vcpu_load_list_reg(vgic, vcpu, idx, virq);
+        return vgic_vcpu_load_list_reg(vgic, vcpu, idx, 0, virq);
     }
 
     return 0;
