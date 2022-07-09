@@ -278,7 +278,7 @@ static int virq_sgi_ppi_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *v
     assert((irq >= 0) && (irq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
     virq_handle_t *slot = &vgic_vcpu->local_virqs[irq];
     if (*slot != NULL) {
-        ZF_LOGE("IRQ %d already registered on VCPU %u\n", irq, vcpu->vcpu_id);
+        ZF_LOGE("IRQ %d already registered on VCPU %u", virq_data->virq, vcpu->vcpu_id);
         return -1;
     }
     *slot = virq_data;
@@ -550,7 +550,7 @@ static int vgic_dist_enable_irq(struct vgic_dist_device *d, vm_vcpu_t *vcpu, int
             virq_ack(vcpu, virq_data);
         }
     } else {
-        DDIST("enabled irq %d has no handle", irq);
+        DDIST("enabled irq %d has no handle\n", irq);
     }
     return 0;
 }
@@ -765,7 +765,7 @@ static memory_fault_result_t handle_vgic_dist_read_fault(vm_t *vm, vm_vcpu_t *vc
         reg = *reg_ptr;
         break;
     default:
-        ZF_LOGE("Unknown register offset 0x%x\n", offset);
+        ZF_LOGE("Unknown register offset 0x%x", offset);
         err = ignore_fault(fault);
         goto fault_return;
     }
@@ -947,7 +947,7 @@ static memory_fault_result_t handle_vgic_dist_write_fault(vm_t *vm, vm_vcpu_t *v
     case RANGE32(0xFC0, 0xFFB):
         break;
     default:
-        ZF_LOGE("Unknown register offset 0x%x\n", offset);
+        ZF_LOGE("Unknown register offset 0x%x", offset);
     }
 ignore_fault:
     err = ignore_fault(fault);
@@ -1077,7 +1077,7 @@ static vm_frame_t vgic_vcpu_iterator(uintptr_t addr, void *cookie)
 
     int err = vka_cspace_alloc_path(vm->vka, &frame);
     if (err) {
-        printf("Failed to allocate cslot for vgic vcpu\n");
+        ZF_LOGE("Failed to allocate cslot for vgic vcpu");
         return frame_result;
     }
     seL4_Word vka_cookie;
@@ -1085,7 +1085,7 @@ static vm_frame_t vgic_vcpu_iterator(uintptr_t addr, void *cookie)
     if (err) {
         err = simple_get_frame_cap(vm->simple, (void *)GIC_VCPU_PADDR, 12, &frame);
         if (err) {
-            ZF_LOGE("Failed to find device cap for vgic vcpu\n");
+            ZF_LOGE("Failed to find device cap for vgic vcpu");
             return frame_result;
         }
     }
@@ -1129,8 +1129,8 @@ int vm_install_vgic(vm_t *vm)
     vgic_dist_reset(vgic_dist);
 
     /* Remap VCPU to CPU */
-    vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR,
-                                                                          0x1000, handle_vgic_vcpu_fault, NULL);
+    vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR, PAGE_SIZE_4K,
+                                                                          handle_vgic_vcpu_fault, NULL);
     int err = vm_map_reservation(vm, vgic_vcpu_reservation, vgic_vcpu_iterator, (void *)vm);
     if (err) {
         free(vgic_dist->priv);
