@@ -81,14 +81,14 @@ typedef struct vgic {
     vgic_vcpu_t vgic_vcpu[CONFIG_MAX_NUM_NODES];
 } vgic_t;
 
-static vgic_vcpu_t *get_vgic_vcpu(vgic_t *vgic, int vcpu_id)
+static inline vgic_vcpu_t *get_vgic_vcpu(vgic_t *vgic, int vcpu_id)
 {
     assert(vgic);
     assert((vcpu_id >= 0) && (vcpu_id < ARRAY_SIZE(vgic->vgic_vcpu)));
     return &(vgic->vgic_vcpu[vcpu_id]);
 }
 
-static struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, vm_vcpu_t *vcpu, int virq)
+static inline struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, vm_vcpu_t *vcpu, int virq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
     assert(vgic_vcpu);
@@ -96,7 +96,7 @@ static struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, vm_vcpu_t *vcpu, int v
     return vgic_vcpu->local_virqs[virq];
 }
 
-static struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int virq)
+static inline struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int virq)
 {
     for (int i = 0; i < ARRAY_SIZE(vgic->vspis); i++) {
         if (vgic->vspis[i] && vgic->vspis[i]->virq == virq) {
@@ -106,7 +106,7 @@ static struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int virq)
     return NULL;
 }
 
-static struct virq_handle *virq_find_irq_data(struct vgic *vgic, vm_vcpu_t *vcpu, int virq)
+static inline struct virq_handle *virq_find_irq_data(struct vgic *vgic, vm_vcpu_t *vcpu, int virq)
 {
     if (virq < NUM_VCPU_LOCAL_VIRQS)  {
         return virq_get_sgi_ppi(vgic, vcpu, virq);
@@ -114,7 +114,7 @@ static struct virq_handle *virq_find_irq_data(struct vgic *vgic, vm_vcpu_t *vcpu
     return virq_find_spi_irq_data(vgic, virq);
 }
 
-static int virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
+static inline int virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
 {
     for (int i = 0; i < ARRAY_SIZE(vgic->vspis); i++) {
         if (vgic->vspis[i] == NULL) {
@@ -125,7 +125,7 @@ static int virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
     return -1;
 }
 
-static int virq_sgi_ppi_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *virq_data)
+static inline int virq_sgi_ppi_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *virq_data)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
     assert(vgic_vcpu);
@@ -140,7 +140,7 @@ static int virq_sgi_ppi_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *v
     return 0;
 }
 
-static int virq_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *virq_data)
+static inline int virq_add(vm_vcpu_t *vcpu, vgic_t *vgic, struct virq_handle *virq_data)
 {
     int virq = virq_data->virq;
     if (virq < NUM_VCPU_LOCAL_VIRQS) {
@@ -187,7 +187,7 @@ static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, vm_vcpu_t *vcpu
     return virq;
 }
 
-static int vgic_find_empty_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu)
+static inline int vgic_find_empty_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
     assert(vgic_vcpu);
@@ -200,7 +200,7 @@ static int vgic_find_empty_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu)
     return -1;
 }
 
-static int vgic_vcpu_load_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu, int idx, struct virq_handle *irq)
+static inline int vgic_vcpu_load_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu, int idx, struct virq_handle *irq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
     assert(vgic_vcpu);
