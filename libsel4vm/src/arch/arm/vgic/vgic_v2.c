@@ -65,7 +65,9 @@ static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d
 {
     assert(d);
     assert(d->vgic);
-    return d->vgic->dist;
+
+    vgic_t *vgic = d->vgic;
+    return priv_get_dist(vgic->registers);
 }
 
 

@@ -147,31 +147,31 @@ static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id
 static int vgic_dist_enable(vgic_t *vgic, vm_t *vm)
 {
     assert(vgic);
-    assert(vgic->dist);
+    assert(priv_get_dist(vgic->dist));
     DDIST("enabling gic distributor\n");
-    vgic->dist->enable = 1;
+    gic_dist_enable(priv_get_dist(vgic->dist));
     return 0;
 }
 
 static int vgic_dist_disable(vgic_t *vgic, vm_t *vm)
 {
     assert(vgic);
-    assert(vgic->dist);
+    assert(priv_get_dist(vgic->dist));
     DDIST("disabling gic distributor\n");
-    vgic->dist->enable = 0;
+    gic_dist_disable(priv_get_dist(vgic->dist));
     return 0;
 }
 
 static void vgic_dist_enable_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 {
     assert(vgic);
-    assert(vgic->dist);
+    assert(priv_get_dist(vgic->dist));
     DDIST("enabling irq %d\n", irq);
-    set_enable(vgic->dist, irq, true, vcpu->vcpu_id);
+    set_enable(priv_get_dist(vgic->dist), irq, true, vcpu->vcpu_id);
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu, irq);
     if (virq_data) {
         /* STATE b) */
-        if (!is_pending(vgic->dist, virq_data->virq, vcpu->vcpu_id)) {
+        if (!is_pending(priv_get_dist(vgic->dist), virq_data->virq, vcpu->vcpu_id)) {
             virq_ack(vcpu, virq_data);
         }
     } else {
@@ -182,7 +182,7 @@ static void vgic_dist_enable_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 static void vgic_dist_disable_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 {
     assert(vgic);
-    assert(vgic->dist);
+    assert(priv_get_dist(vgic->dist));
 
     /* STATE g)
      *
@@ -194,30 +194,29 @@ static void vgic_dist_disable_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
      */
     if (irq >= NUM_SGI_VIRQS) {
         DDIST("disabling irq %d\n", irq);
-        set_enable(vgic->dist, irq, false, vcpu->vcpu_id);
+        set_enable(priv_get_dist(vgic->dist), irq, false, vcpu->vcpu_id);
     }
 }
 
 static int vgic_dist_set_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 {
     assert(vgic);
-    assert(vgic->dist);
-
+    assert(priv_get_dist(vgic->dist));
     /* STATE c) */
-
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu, irq);
 
-    if (!virq_data || !vgic->dist->enable || !is_enabled(vgic->dist, irq, vcpu->vcpu_id)) {
+    if (!virq_data || !gic_dist_is_enabled(gic_dist) || !is_enabled(gic_dist, irq, vcpu->vcpu_id)) {
         DDIST("IRQ not enabled (%d) on vcpu %d\n", irq, vcpu->vcpu_id);
         return -1;
     }
 
-    if (is_pending(vgic->dist, virq_data->virq, vcpu->vcpu_id)) {
+    if (is_pending(gic_dist, virq_data->virq, vcpu->vcpu_id)) {
         return 0;
     }
 
     DDIST("Pending set: Inject IRQ from pending set (%d)\n", irq);
-    set_pending(vgic->dist, virq_data->virq, true, vcpu->vcpu_id);
+    set_pending(gic_dist, virq_data->virq, true, vcpu->vcpu_id);
 
     /* Enqueueing an IRQ and dequeueing it right after makes little sense
      * now, but in the future this is needed to support IRQ priorities.
@@ -246,10 +245,9 @@ static int vgic_dist_set_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 static int vgic_dist_clr_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 {
     assert(vgic);
-    assert(vgic->dist);
-
+    assert(priv_get_dist(vgic->dist));
     DDIST("clr pending irq %d\n", irq);
-    set_pending(vgic->dist, irq, false, vcpu->vcpu_id);
+    set_pending(priv_get_dist(vgic->dist), irq, false, vcpu->vcpu_id);
     /* TODO: remove from IRQ queue and list registers as well */
     return 0;
 }
@@ -260,7 +258,7 @@ static memory_fault_result_t vgic_dist_reg_read(vm_t *vm, vm_vcpu_t *vcpu,
     int err = 0;
     fault_t *fault = vcpu->vcpu_arch.fault;
     assert(vgic->dist);
-    struct gic_dist_map *gic_dist = vgic->dist;
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
     uint32_t reg = 0;
     int reg_offset = 0;
     uintptr_t base_reg;
@@ -417,7 +415,7 @@ static memory_fault_result_t vgic_dist_reg_write(vm_t *vm, vm_vcpu_t *vcpu,
     int err = 0;
     fault_t *fault = vcpu->vcpu_arch.fault;
     assert(vgic->dist);
-    struct gic_dist_map *gic_dist = vgic->dist;
+    struct gic_dist_map *gic_dist = priv_get_dist(vgic->dist);
     uint32_t reg = 0;
     uint32_t mask = fault_get_data_mask(fault);
     uint32_t reg_offset = 0;
@@ -425,7 +423,7 @@ static memory_fault_result_t vgic_dist_reg_write(vm_t *vm, vm_vcpu_t *vcpu,
     switch (offset) {
     case RANGE32(GIC_DIST_CTLR, GIC_DIST_CTLR):
         data = fault_get_data(fault);
-        if (data == 1) {
+        if (data == GIC_ENABLED) {
             vgic_dist_enable(vgic, vm);
         } else if (data == 0) {
             vgic_dist_disable(vgic, vm);

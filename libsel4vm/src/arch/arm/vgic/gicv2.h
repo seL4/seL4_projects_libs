@@ -9,6 +9,7 @@
 #include <autoconf.h>
 #include <assert.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 
 /* FIXME these should be defined in a way that is friendlier to extension. */
@@ -37,6 +38,8 @@
 #define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x4000)
 #define GIC_VCPU_PADDR       (GIC_PADDR + 0x6000)
 #endif
+
+#define GIC_ENABLED 1
 
 /* Memory map for GIC distributor */
 struct gic_dist_map {
@@ -89,3 +92,24 @@ struct gic_dist_map {
     uint32_t periph_id[12];                             /* [0xFC0, 0xFF0) */
     uint32_t component_id[4];                           /* [0xFF0, 0xFFF] */
 };
+
+typedef struct gic_dist_map vgic_reg_t;
+
+static inline struct gic_dist_map *priv_get_dist(void *priv)
+{
+    return (struct gic_dist_map *) priv;
+}
+
+static inline bool gic_dist_is_enabled(struct gic_dist_map *gic_dist)
+{
+    return gic_dist->enable;
+}
+
+static inline void gic_dist_enable(struct gic_dist_map *gic_dist) {
+    gic_dist->enable = 1;
+}
+
+static inline void gic_dist_disable(struct gic_dist_map *gic_dist)
+{
+    gic_dist->enable = 0;
+}
