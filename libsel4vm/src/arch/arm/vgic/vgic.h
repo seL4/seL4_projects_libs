@@ -6,10 +6,12 @@
 
 #include <sel4vm/guest_vm.h>
 
+typedef struct vgic vgic_t;
+
 struct vgic_dist_device {
     uintptr_t pstart;
     size_t size;
-    void *priv;
+    vgic_t *vgic;
 };
 
 extern const struct vgic_dist_device dev_vgic_dist;

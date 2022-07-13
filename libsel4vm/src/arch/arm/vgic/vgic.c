@@ -303,18 +303,11 @@ static inline void virq_init(virq_handle_t virq, int irq, irq_ack_fn_t ack_fn, v
     virq->ack = ack_fn;
 }
 
-static inline struct vgic *vgic_device_get_vgic(struct vgic_dist_device *d)
-{
-    assert(d);
-    assert(d->priv);
-    return (vgic_t *)d->priv;
-}
-
 static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d)
 {
     assert(d);
-    assert(d->priv);
-    return vgic_device_get_vgic(d)->dist;
+    assert(d->vgic);
+    return d->vgic->dist;
 }
 
 static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
@@ -500,7 +493,7 @@ int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
     /* STATE d) */
     assert(vgic_dist);
     struct gic_dist_map *gic_dist = vgic_priv_get_dist(vgic_dist);
-    vgic_t *vgic = vgic_device_get_vgic(vgic_dist);
+    vgic_t *vgic = vgic_dist->vgic;
     assert(vgic);
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
     assert(vgic_vcpu);
@@ -978,7 +971,7 @@ static memory_fault_result_t handle_vgic_dist_fault(vm_t *vm, vm_vcpu_t *vcpu, u
 
     assert(cookie);
     struct vgic_dist_device *d = (typeof(d))cookie;
-    vgic_t *vgic = vgic_device_get_vgic(d);
+    vgic_t *vgic = d->vgic;
     assert(vgic->dist);
 
     seL4_Word addr = fault_get_address(fault);
@@ -1047,7 +1040,7 @@ static void vgic_dist_reset(struct vgic_dist_device *d)
 
 int vm_register_irq(vm_vcpu_t *vcpu, int irq, irq_ack_fn_t ack_fn, void *cookie)
 {
-    struct vgic *vgic = vgic_device_get_vgic(vgic_dist);
+    struct vgic *vgic = vgic_dist->vgic;
     assert(vgic);
 
     struct virq_handle *virq_data = calloc(1, sizeof(*virq_data));
@@ -1070,7 +1063,7 @@ int vm_inject_irq(vm_vcpu_t *vcpu, int irq)
 {
     // vm->lock();
 
-    struct vgic *vgic = vgic_device_get_vgic(vgic_dist);
+    struct vgic *vgic = vgic_dist->vgic;
     assert(vgic);
 
     DIRQ("VM received IRQ %d\n", irq);
@@ -1151,7 +1144,7 @@ int vm_install_vgic(vm_t *vm)
     }
     vm_memory_reservation_t *vgic_dist_res = vm_reserve_memory_at(vm, GIC_DIST_PADDR, PAGE_SIZE_4K,
                                                                   handle_vgic_dist_fault, (void *)vgic_dist);
-    vgic_dist->priv = (void *)vgic;
+    vgic_dist->vgic = vgic;
     vgic_dist_reset(vgic_dist);
 
     /* Remap VCPU to CPU */
@@ -1159,7 +1152,7 @@ int vm_install_vgic(vm_t *vm)
                                                                           handle_vgic_vcpu_fault, NULL);
     int err = vm_map_reservation(vm, vgic_vcpu_reservation, vgic_vcpu_iterator, (void *)vm);
     if (err) {
-        free(vgic_dist->priv);
+        free(vgic_dist->vgic);
         return -1;
     }
 
@@ -1186,5 +1179,5 @@ int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
 const struct vgic_dist_device dev_vgic_dist = {
     .pstart = GIC_DIST_PADDR,
     .size = 0x1000,
-    .priv = NULL,
+    .vgic = NULL,
 };
