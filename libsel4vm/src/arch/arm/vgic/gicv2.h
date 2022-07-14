@@ -90,6 +90,11 @@ struct gic_dist_map {
     uint32_t component_id[4];                           /* [0xFF0, 0xFFF] */
 };
 
+static inline bool gic_dist_is_enabled(vgic_t *vgic)
+{
+    return (0 != vgic->dist->enable);
+}
+
 static inline void vgic_dist_set_ctlr(vgic_t *vgic, uint32_t data)
 {
     /* ToDo: we should care about bit 0 only and ignore all the others. */
