@@ -98,10 +98,9 @@ int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
 }
 
 
-static void vgic_dist_reset(struct vgic_dist_device *d)
+static void vgic_dist_reset(vgic_t *vgic)
 {
-    struct gic_dist_map *gic_dist;
-    gic_dist = vgic_priv_get_dist(d);
+    struct gic_dist_map *gic_dist = vgic->dist;
     memset(gic_dist, 0, sizeof(*gic_dist));
     gic_dist->ic_type         = 0x0000fce7; /* RO */
     gic_dist->dist_ident      = 0x0200043b; /* RO */
@@ -260,7 +259,7 @@ int vm_install_vgic(vm_t *vm)
     vm_memory_reservation_t *vgic_dist_res = vm_reserve_memory_at(vm, GIC_DIST_PADDR, PAGE_SIZE_4K,
                                                                   handle_vgic_dist_fault, (void *)vgic_dist);
     vgic_dist->vgic = vgic;
-    vgic_dist_reset(vgic_dist);
+    vgic_dist_reset(vgic);
 
     /* Remap VCPU to CPU */
     vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR, PAGE_SIZE_4K,
