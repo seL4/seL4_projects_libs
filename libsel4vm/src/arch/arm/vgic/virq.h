@@ -73,6 +73,8 @@ typedef struct vgic_vcpu {
 
 /* GIC global interrupt context */
 typedef struct vgic {
+    vm_mapping_t mapped_cpu_if;
+    vm_mapping_t mapped_dist;
     /* virtual distributor registers */
     struct gic_dist_map *dist;
     /* registered global interrupts (SPI) */

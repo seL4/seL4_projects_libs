@@ -576,14 +576,12 @@ static memory_fault_result_t handle_vgic_dist_fault(vm_t *vm, vm_vcpu_t *vcpu, u
     assert(fault_addr == fault_get_address(vcpu->vcpu_arch.fault));
 
     assert(cookie);
-    struct vgic_dist_device *d = (typeof(d))cookie;
-    vgic_t *vgic = d->vgic;
-    assert(vgic->dist);
+    vgic_t *vgic = (typeof(vgic))cookie;
 
     seL4_Word addr = fault_get_address(fault);
-    assert(addr >= d->pstart);
-    seL4_Word offset = addr - d->pstart;
-    assert(offset < PAGE_SIZE_4K);
+    assert(addr >= vgic->mapped_dist.paddr);
+    seL4_Word offset = addr - vgic->mapped_dist.paddr;
+    assert(offset < vgic->mapped_dist.size);
 
     return fault_is_read(fault) ? vgic_dist_reg_read(vgic, vcpu, offset)
            : vgic_dist_reg_write(vgic, vcpu, offset);

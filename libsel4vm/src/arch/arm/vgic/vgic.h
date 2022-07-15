@@ -6,15 +6,13 @@
 
 #include <sel4vm/guest_vm.h>
 
-typedef struct vgic vgic_t;
-
-struct vgic_dist_device {
-    uintptr_t pstart;
+typedef struct {
+    uintptr_t paddr;
     size_t size;
-    vgic_t *vgic;
-};
+    vm_memory_reservation_t *vm_res;
+} vm_mapping_t;
 
-extern const struct vgic_dist_device dev_vgic_dist;
+typedef struct vgic vgic_t;
 
 int vm_install_vgic(vm_t *vm);
 int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu);
