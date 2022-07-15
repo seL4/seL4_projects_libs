@@ -18,3 +18,11 @@ extern const struct vgic_dist_device dev_vgic_dist;
 
 int vm_install_vgic(vm_t *vm);
 int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu);
+
+static inline vgic_t *get_vgic_from_vm(vm_t *vm)
+{
+    assert(vm);
+    vgic_t *vgic = (typeof(vgic))(vm->arch.vgic_context);
+    assert(vgic);
+    return vgic;
+}

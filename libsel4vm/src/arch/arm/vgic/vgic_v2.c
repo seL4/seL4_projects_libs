@@ -59,22 +59,11 @@
 #include "vdist.h"
 
 
-static struct vgic_dist_device *vgic_dist;
-
-static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d)
-{
-    assert(d);
-    assert(d->vgic);
-    return d->vgic->dist;
-}
-
-
 int handle_vgic_maintenance(vm_vcpu_t *vcpu, int idx)
 {
     /* STATE d) */
-    assert(vgic_dist);
-    struct gic_dist_map *gic_dist = vgic_priv_get_dist(vgic_dist);
-    vgic_t *vgic = vgic_dist->vgic;
+    assert(vcpu);
+    vgic_t *vgic = get_vgic_from_vm(vcpu->vm);
     assert(vgic);
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu->vcpu_id);
     assert(vgic_vcpu);
@@ -154,7 +143,8 @@ static void vgic_dist_reset(vgic_t *vgic)
 
 int vm_register_irq(vm_vcpu_t *vcpu, int irq, irq_ack_fn_t ack_fn, void *cookie)
 {
-    struct vgic *vgic = vgic_dist->vgic;
+    assert(vcpu);
+    vgic_t *vgic = get_vgic_from_vm(vcpu->vm);
     assert(vgic);
 
     struct virq_handle *virq_data = calloc(1, sizeof(*virq_data));
@@ -177,7 +167,8 @@ int vm_inject_irq(vm_vcpu_t *vcpu, int irq)
 {
     // vm->lock();
 
-    struct vgic *vgic = vgic_dist->vgic;
+    assert(vcpu);
+    vgic_t *vgic = get_vgic_from_vm(vcpu->vm);
     assert(vgic);
 
     DIRQ("VM received IRQ %d\n", irq);
@@ -245,7 +236,7 @@ int vm_install_vgic(vm_t *vm)
      */
 
     /* Distributor */
-    vgic_dist = (struct vgic_dist_device *)calloc(1, sizeof(struct vgic_dist_device));
+    struct vgic_dist_device *vgic_dist = (struct vgic_dist_device *)calloc(1, sizeof(struct vgic_dist_device));
     if (!vgic_dist) {
         return -1;
     }
@@ -269,6 +260,8 @@ int vm_install_vgic(vm_t *vm)
         free(vgic_dist->vgic);
         return -1;
     }
+
+    vm->arch.vgic_context = vgic;
 
     return 0;
 }
