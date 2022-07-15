@@ -236,8 +236,8 @@ static int vgic_dist_clr_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
     return 0;
 }
 
-static memory_fault_result_t vgic_dist_reg_read(vm_t *vm, vm_vcpu_t *vcpu,
-                                                vgic_t *vgic, seL4_Word offset)
+static memory_fault_result_t vgic_dist_reg_read(vgic_t *vgic, vm_vcpu_t *vcpu,
+                                                seL4_Word offset)
 {
     int err = 0;
     fault_t *fault = vcpu->vcpu_arch.fault;
@@ -393,8 +393,8 @@ static inline void emulate_reg_write_access(uint32_t *vreg, fault_t *fault)
     *vreg = fault_emulate(fault, *vreg);
 }
 
-static memory_fault_result_t vgic_dist_reg_write(vm_t *vm, vm_vcpu_t *vcpu,
-                                                 vgic_t *vgic, seL4_Word offset)
+static memory_fault_result_t vgic_dist_reg_write(vgic_t *vgic, vm_vcpu_t *vcpu,
+                                                 seL4_Word offset)
 {
     int err = 0;
     fault_t *fault = vcpu->vcpu_arch.fault;
@@ -565,6 +565,9 @@ static memory_fault_result_t handle_vgic_dist_fault(vm_t *vm, vm_vcpu_t *vcpu, u
                                                     size_t fault_length,
                                                     void *cookie)
 {
+    /* The vcpu has a vm reference, it must match the vm parameter. */
+    assert(vm == vcpu->vm);
+
     /* There is a fault object per vcpu with much more context, the parameters
      * fault_addr and fault_length are no longer used.
      */
@@ -582,6 +585,6 @@ static memory_fault_result_t handle_vgic_dist_fault(vm_t *vm, vm_vcpu_t *vcpu, u
     seL4_Word offset = addr - d->pstart;
     assert(offset < PAGE_SIZE_4K);
 
-    return fault_is_read(fault) ? vgic_dist_reg_read(vm, vcpu, vgic, offset)
-           : vgic_dist_reg_write(vm, vcpu, vgic, offset);
+    return fault_is_read(fault) ? vgic_dist_reg_read(vgic, vcpu, offset)
+           : vgic_dist_reg_write(vgic, vcpu, offset);
 }
