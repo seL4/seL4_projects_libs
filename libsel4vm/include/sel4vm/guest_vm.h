@@ -193,7 +193,7 @@ struct vm {
     struct vm_run run;
     /* Guest vm cspace */
     struct vm_cspace cspace;
-    /* Host endoint (i.e. vmm) to wait for VM faults and host events */
+    /* Host endpoint (i.e. vmm) to wait for VM faults and host events */
     seL4_CPtr host_endpoint;
     /* Support & Resource Managements */
     vka_t *vka;
