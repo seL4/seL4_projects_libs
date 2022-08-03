@@ -7,7 +7,7 @@
 #pragma once
 
 typedef void (*console_handle_irq_fn_t)(void *cookie);
-typedef void (*console_putchar_fn_t)(char c);
+typedef void (*console_putchar_fn_t)(int port, char c);
 
 struct console_passthrough {
     console_handle_irq_fn_t handleIRQ;
