@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -235,9 +235,9 @@ bool net_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsign
         //Net only
         *result = BIT(VIRTIO_NET_F_MAC);
         break;
-    case 0x14 ... 0x19:
+    case VIRTIO_PCI_CONFIG_OFF(false) ... (VIRTIO_PCI_CONFIG_OFF(false) + VIRTIO_NET_CONFIG_MAC_SZ - 1):
         assert(size == 1);
-        *result = ((ethif_internal_t *)emul->internal)->mac[offset - 0x14];
+        *result = ((ethif_internal_t *)emul->internal)->mac[offset - VIRTIO_PCI_CONFIG_OFF(false)];
         handled = true;
         break;
     }

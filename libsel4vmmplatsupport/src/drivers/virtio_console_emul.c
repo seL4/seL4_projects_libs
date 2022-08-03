@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -10,23 +10,28 @@
 #include "virtio_emul_helpers.h"
 
 #define VUART_BUFLEN 4088
-
 char buf[VUART_BUFLEN];
 
 typedef struct console_virtio_emul_internal {
     struct console_passthrough driver;
+    /* counter for console ports */
+    unsigned int con_count;
+    /* what queue did data come through? */
+    int queue_num;
 } console_internal_t;
 
-static void emul_con_rx_complete(void *iface, char *buf, unsigned int len)
+typedef void(*tx_handler_fn_t)(virtio_emul_t *emul, int queue, void *buffer, unsigned int len);
+
+static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, unsigned int len)
 {
-    virtio_emul_t *emul = (virtio_emul_t *)iface;
     console_internal_t *con = emul->internal;
     vqueue_t *virtq = &emul->virtq;
     int i;
-    struct vring *vring = &virtq->vring[RX_QUEUE];
+    struct vring *vring = &virtq->vring[queue];
 
     uint16_t guest_idx = ring_avail_idx(emul, vring);
-    uint16_t idx = virtq->last_idx[RX_QUEUE];
+    uint16_t idx = virtq->last_idx[queue];
+
     if (idx != guest_idx) {
         /* total length of the written packet so far */
         size_t tot_written = 0;
@@ -72,38 +77,122 @@ static void emul_con_rx_complete(void *iface, char *buf, unsigned int len)
         ring_used_add(emul, vring, used_elem);
 
         /* record that we've used this descriptor chain now */
-        virtq->last_idx[RX_QUEUE]++;
+        virtq->last_idx[queue]++;
         /* notify the guest that there is something in its used ring */
         con->driver.handleIRQ(con->driver.console_data);
     }
 }
 
-void virtio_console_putchar(virtio_emul_t *con, char *buf, int len)
+
+/**
+ * Write to guest console attached to a port.
+ * 
+ * The relationship between virtqueues and port numbers is as follows:
+ * (0, 1): Port 0 RX and TX, respectively
+ * (2, 3): Control messages RX and TX, used for setting up virtiocon
+ * (4, 5): Port 1 RX and TX
+ * (2+2*N, 2+2*N+1): Port N RX and TX
+ */
+void virtio_console_putchar(int port, virtio_emul_t *emul, char *buf, int len)
 {
-    emul_con_rx_complete((void *)con, buf, len);
+    /* port -1 is for the control messages, all others as normal */
+    int vq_num = 0;
+    if (port > 0) {
+        vq_num = CTL_RX_QUEUE + 2*port;
+    }
+    emul_con_rx_complete(emul, vq_num, buf, len);
+}
+
+/* Write to port attached to queue number */
+static void port_write(virtio_emul_t *emul, int queue, char *buffer, unsigned int len)
+{
+    console_internal_t *con = emul->internal;
+    /* Get port number */
+    int port;
+    if (queue == 1) {
+        port = 0;
+    } else {
+        port = queue/2 - 1;
+    }
+
+    /* forward it */
+    for (int i = 0; i < len; i++) {
+        con->driver.putchar(port, buffer[i]);
+    }
+}
+
+static void handle_control_message(virtio_emul_t *emul, void *buffer)
+{
+    struct virtio_con_ctl *ctl_msg = (struct virtio_con_ctl *) buffer;
+
+    console_internal_t *con = emul->internal;
+    uint16_t event = ctl_msg->event;
+    uint16_t value = ctl_msg->value;
+
+    switch (event) {
+    case VIRTIO_CON_DEVICE_READY:
+    case VIRTIO_CON_PORT_READY:
+        assert(value == 1);
+
+        if (con->con_count != VIRTIO_CON_MAX_PORTS) {
+            struct virtio_con_ctl out_msg = {
+                con->con_count,
+                VIRTIO_CON_PORT_ADD,
+                0
+            };
+            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, sizeof(out_msg));
+
+            con->con_count++;
+        } else {
+            /* Reset the console counter so we can use it to set ports as consoles */
+            con->con_count = 0;
+
+            /* Once we finish adding all ports, nominate port 0 as the console */
+            struct virtio_con_ctl out_msg = {
+                con->con_count,
+                VIRTIO_CON_CON_PORT,
+                1
+            };
+            con->con_count++;
+            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, sizeof(out_msg));
+        }
+
+        break;
+    case VIRTIO_CON_PORT_OPEN:
+        assert(value == 1);
+        /* Continue nominating the console ports */
+        if (con->con_count != VIRTIO_CON_MAX_PORTS) {
+            struct virtio_con_ctl out_msg = {
+                con->con_count,
+                VIRTIO_CON_CON_PORT,
+                1
+            };
+            con->con_count++;
+            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, sizeof(out_msg));
+        }
+        break;
+    default:
+        ZF_LOGE("Event %x in control TX queue unhandled", event);
+    }
 }
 
 static void emul_con_notify_tx(virtio_emul_t *emul)
 {
     console_internal_t *con = emul->internal;
     vqueue_t *virtq = &emul->virtq;
-    struct vring *vring = &virtq->vring[TX_QUEUE];
+
+
+    struct vring *vring = &virtq->vring[con->queue_num];
     /* read the index */
     uint16_t guest_idx = ring_avail_idx(emul, vring);
     /* process what we can of the ring */
 
-    uint16_t idx = virtq->last_idx[TX_QUEUE];
+    uint16_t idx = virtq->last_idx[con->queue_num];
     while (idx != guest_idx) {
-
         /* read the head of the descriptor chain */
         uint16_t desc_head = ring_avail(emul, vring, idx);
-
         /* length of the final packet to deliver */
         uint32_t len = 0;
-        /* we want to skip the initial virtio header, as this should
-         * not be sent to the actual ethernet driver. This records
-         * how much we have skipped so far. */
-        uint32_t skipped = 0;
         /* start walking the descriptors */
         struct vring_desc desc;
         uint16_t desc_idx = desc_head;
@@ -114,40 +203,71 @@ static void emul_con_notify_tx(virtio_emul_t *emul)
             len += desc.len;
             desc_idx = desc.next;
         } while (desc.flags & VRING_DESC_F_NEXT);
-        /* ship it */
-        for (int i = 0; i < len; i++) {
-            con->driver.putchar(buf[i]);
+
+        /* Handle data */
+        if (con->queue_num == CTL_TX_QUEUE) {
+            handle_control_message(emul, buf);
+        } else {
+            port_write(emul, con->queue_num, buf, len);
         }
+
         /* next */
         idx++;
         struct vring_used_elem used_elem = {desc_head, 0};
-        ring_used_add(emul, &virtq->vring[TX_QUEUE], used_elem);
+        ring_used_add(emul, &virtq->vring[con->queue_num], used_elem);
         con->driver.handleIRQ(con->driver.console_data);
     }
     /* update which parts of the ring we have processed */
-    virtq->last_idx[TX_QUEUE] = idx;
+    virtq->last_idx[con->queue_num] = idx;
 }
 
-// NOTE: Both in/out are the same. Leaving stubs here incase additional features are needed.
-bool console_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsigned int size, unsigned int *result)
+bool console_device_emul_io_in(virtio_emul_t *emul, unsigned int offset, unsigned int size, unsigned int *result)
 {
     bool handled = false;
     switch (offset) {
     case VIRTIO_PCI_HOST_FEATURES:
         handled = true;
         assert(size == 4);
+
+        *result = BIT(VIRTIO_CON_F_MULTIPORT);
+        break;
+    case VIRTIO_CON_CFG_MAX_PORTS ... VIRTIO_CON_CFG_MAX_PORTS + 3:
+        handled = true;
+
+        /* Set VIRTIO_CON_MAX_PORTS in little-endian */
+        if (offset == VIRTIO_CON_CFG_MAX_PORTS) {
+            *result = VIRTIO_CON_MAX_PORTS;
+        } else {
+            *result = 0;
+        }
+
         break;
     }
     return handled;
 }
 
-bool console_device_emul_io_out(struct virtio_emul *emul, unsigned int offset, unsigned int size, unsigned int value)
+bool console_device_emul_io_out(virtio_emul_t *emul, unsigned int offset, unsigned int size, unsigned int value)
 {
     bool handled = false;
     switch (offset) {
     case VIRTIO_PCI_GUEST_FEATURES:
+        /* After sending the desired features to the driver, it responds
+         * with all the features it can support. Here we make sure what we
+         * want is provided by asserting */
         handled = true;
         assert(size == 4);
+        assert(value == BIT(VIRTIO_CON_F_MULTIPORT));
+        break;
+    case VIRTIO_PCI_QUEUE_NOTIFY:
+        handled = true;
+        console_internal_t *con = emul->internal;
+        con->queue_num = value;
+        if (value % 2 == 0) {
+            /* Ignore RX packets for now (see virtio_emul.c) */
+        } else {
+            /* Generic TX */
+            emul->notify(emul);
+        }
         break;
     }
     return handled;
@@ -161,14 +281,17 @@ void *console_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, console_
     if (!internal) {
         goto error;
     }
+
     err = driver(&internal->driver, io_ops, config);
-    emul->device_io_in = console_device_emul_io_in;
-    emul->device_io_out = console_device_emul_io_out;
     if (err) {
         ZF_LOGE("Failed to initialize driver");
         goto error;
     }
+
+    emul->device_io_in = console_device_emul_io_in;
+    emul->device_io_out = console_device_emul_io_out;
     emul->notify = emul_con_notify_tx;
+    internal->con_count = 0;
     return (void *)internal;
 error:
     if (emul) {

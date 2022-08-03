@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -7,7 +7,7 @@
 #pragma once
 
 typedef void (*console_handle_irq_fn_t)(void *cookie);
-typedef void (*console_putchar_fn_t)(char c);
+typedef void (*console_putchar_fn_t)(int port, char c);
 
 struct console_passthrough {
     console_handle_irq_fn_t handleIRQ;

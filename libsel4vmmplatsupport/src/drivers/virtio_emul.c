@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -80,7 +80,7 @@ static int emul_io_out(virtio_emul_t *emul, unsigned int offset, unsigned int si
     case VIRTIO_PCI_QUEUE_SEL:
         assert(size == 2);
         emul->virtq.queue = (value & 0xffff);
-        assert(emul->virtq.queue == 0 || emul->virtq.queue == 1);
+        assert(emul->virtq.queue >= 0 && emul->virtq.queue < VQUEUE_NUM_VRINGS);
         break;
     case VIRTIO_PCI_QUEUE_PFN: {
         assert(size == 4);
@@ -97,6 +97,8 @@ static int emul_io_out(virtio_emul_t *emul, unsigned int offset, unsigned int si
              * more buffers */
         } else if (value == TX_QUEUE) {
             emul->notify(emul);
+        } else {
+            assert(!"panic");
         }
         break;
     default:
@@ -131,11 +133,11 @@ virtio_emul_t *virtio_emul_init(ps_io_ops_t io_ops, int queue_size, vm_t *vm, vo
         return NULL;
     }
     emul->vm = vm;
-    emul->virtq.queue_size[RX_QUEUE] = queue_size;
-    emul->virtq.queue_size[TX_QUEUE] = queue_size;
     /* create dummy rings. we never actually dereference the rings so they can be null */
-    vring_init(&emul->virtq.vring[RX_QUEUE], emul->virtq.queue_size[RX_QUEUE], 0, VIRTIO_PCI_VRING_ALIGN);
-    vring_init(&emul->virtq.vring[TX_QUEUE], emul->virtq.queue_size[TX_QUEUE], 0, VIRTIO_PCI_VRING_ALIGN);
+    for (int i = 0; i < VQUEUE_NUM_VRINGS; i++) {
+        emul->virtq.queue_size[i] = queue_size;
+        vring_init(&emul->virtq.vring[i], emul->virtq.queue_size[i], 0, VIRTIO_PCI_VRING_ALIGN);
+    }
     emul->io_in = emul_io_in;
     emul->io_out = emul_io_out;
 

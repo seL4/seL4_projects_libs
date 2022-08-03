@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -13,10 +13,11 @@
 #include <satadrivers/raw.h>
 #include <sel4vmmplatsupport/drivers/virtio_pci_console.h>
 #include <sel4vm/guest_vm.h>
-#include <ethdrivers/virtio/virtio_ring.h>
-#include <ethdrivers/virtio/virtio_pci.h>
-#include <ethdrivers/virtio/virtio_net.h>
-#include <ethdrivers/virtio/virtio_config.h>
+#include <virtio/virtio_ring.h>
+#include <virtio/virtio_pci.h>
+#include <virtio/virtio_net.h>
+#include <virtio/virtio_con.h>
+#include <virtio/virtio_config.h>
 
 #define RX_QUEUE 0
 #define TX_QUEUE 1
@@ -27,13 +28,14 @@ typedef enum virtio_pci_devices {
     VIRTIO_BLOCK,
 } virtio_pci_devices_t;
 
+#define VQUEUE_NUM_VRINGS (VIRTIO_CON_MAX_PORTS*2+2)
 typedef struct v_queue {
     int status;
     uint16_t queue;
-    struct vring vring[2];
-    uint16_t queue_size[2];
-    uint32_t queue_pfn[2];
-    uint16_t last_idx[2];
+    struct vring vring[VQUEUE_NUM_VRINGS];
+    uint16_t queue_size[VQUEUE_NUM_VRINGS];
+    uint32_t queue_pfn[VQUEUE_NUM_VRINGS];
+    uint16_t last_idx[VQUEUE_NUM_VRINGS];
 } vqueue_t;
 
 typedef struct virtio_emul {
