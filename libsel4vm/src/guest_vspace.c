@@ -16,22 +16,6 @@
 #include "guest_vspace.h"
 #include "guest_vspace_arch.h"
 
-typedef struct guest_iospace {
-    seL4_CPtr iospace;
-    struct sel4utils_alloc_data iospace_vspace_data;
-    vspace_t iospace_vspace;
-} guest_iospace_t;
-
-typedef struct guest_vspace {
-    /* We abuse struct ordering and this member MUST be the first
-     * thing in the struct */
-    struct sel4utils_alloc_data vspace_data;
-    /* debug flag for checking if we add io spaces late */
-    int done_mapping;
-    int num_iospaces;
-    guest_iospace_t **iospaces;
-} guest_vspace_t;
-
 static int guest_vspace_map(vspace_t *vspace, seL4_CPtr cap, void *vaddr, seL4_CapRights_t rights,
                             int cacheable, size_t size_bits)
 {
@@ -41,21 +25,51 @@ static int guest_vspace_map(vspace_t *vspace, seL4_CPtr cap, void *vaddr, seL4_C
     if (error) {
         return error;
     }
-
-#if defined(CONFIG_TK1_SMMU) || defined(CONFIG_IOMMU)
     struct sel4utils_alloc_data *data = get_alloc_data(vspace);
     /* this type cast works because the alloc data was at the start of the struct
      * so it has the same address.
      * This conversion is guaranteed to work by the C standard */
     guest_vspace_t *guest_vspace = (guest_vspace_t *) data;
+
+    cspacepath_t orig_path, new_path;
+    vka_cspace_make_path(guest_vspace->vspace_data.vka, cap, &orig_path);
+
+#ifdef CONFIG_LIB_SEL4VM_USE_TRANSLATION_VSPACE
+    /* duplicate the cap so we can do a mapping */
+    error = vka_cspace_alloc_path(guest_vspace->vspace_data.vka, &new_path);
+    if (error) {
+        ZF_LOGE("Failed to allocate cslot to duplicate frame cap");
+        return error;
+    }
+
+    error = vka_cnode_copy(&new_path, &orig_path, seL4_AllRights);
+    if (error) {
+        ZF_LOGE("Failed to duplicate frame cap");
+        return error;
+    }
+
+    /* perform the regular mapping */
+    void *vmm_vaddr = vspace_map_pages(&guest_vspace->vmm_vspace, &new_path.capPtr, NULL, seL4_AllRights, 1, size_bits,
+                                       cacheable);
+    if (!vmm_vaddr) {
+        ZF_LOGE("Failed to map into VMM vspace");
+        return -1;
+    }
+
+    /* add translation information. give dummy cap value of 42 as it cannot be zero
+     * but we really just want to store information in the cookie */
+    error = update_entries(&guest_vspace->translation_vspace, (uintptr_t)vaddr, 42, size_bits, (uintptr_t)vmm_vaddr);
+    if (error) {
+        ZF_LOGE("Failed to add translation information");
+        return error;
+    }
+#endif
+
+#if defined(CONFIG_ARM_SMMU) || defined(CONFIG_IOMMU)
     /* set the mapping bit */
     guest_vspace->done_mapping = 1;
-    cspacepath_t orig_path;
-    /* duplicate the cap so we can do a mapping */
-    vka_cspace_make_path(guest_vspace->vspace_data.vka, cap, &orig_path);
     /* map into all the io spaces */
     for (int i = 0; i < guest_vspace->num_iospaces; i++) {
-        cspacepath_t new_path;
         error = vka_cspace_alloc_path(guest_vspace->vspace_data.vka, &new_path);
         if (error) {
             ZF_LOGE("Failed to allocate cslot to duplicate frame cap");
@@ -98,12 +112,27 @@ void guest_vspace_unmap(vspace_t *vspace, void *vaddr, size_t num_pages, size_t 
      * This can be done in a single call as mappings are contiguous in this vspace. */
     sel4utils_unmap_pages(vspace, vaddr, num_pages, size_bits, vka);
 
-#if defined(CONFIG_ARM_SMMU) || defined(CONFIG_IOMMU)
     /* Each page must be unmapped individually from the vmm vspace, as mappings are not
      * necessarily host-virtually contiguous. */
     size_t page_size = BIT(size_bits);
     for (int i = 0; i < num_pages; i++) {
         void *page_vaddr = (void *)(vaddr + i * page_size);
+#ifdef CONFIG_LIB_SEL4VM_USE_TRANSLATION_VSPACE
+        /* look up vaddr in vmm vspace by consulting entry in translation vspace */
+        void *vmm_vaddr = (void *)vspace_get_cookie(&guest_vspace->translation_vspace, page_vaddr);
+
+        /* remove mapping from vmm vspace */
+        vspace_unmap_pages(&guest_vspace->vmm_vspace, vmm_vaddr, 1 /* num pages */, size_bits, vka);
+
+        /* remove mapping from translation vspace */
+        error = clear_entries(&guest_vspace->translation_vspace, (uintptr_t)page_vaddr, size_bits);
+        if (error) {
+            ZF_LOGE("Failed to clear translation information");
+            return;
+        }
+#endif
+
+#if defined(CONFIG_ARM_SMMU) || defined(CONFIG_IOMMU)
         /* Unmap the vaddr from each iospace, freeing the cslots used to store the
          * copy of the frame cap. */
         for (int i = 0; i < guest_vspace->num_iospaces; i++) {
@@ -132,8 +161,8 @@ void guest_vspace_unmap(vspace_t *vspace, void *vaddr, size_t num_pages, size_t 
                 return;
             }
         }
-    }
 #endif
+    }
 }
 
 int vm_guest_add_iospace(vm_t *vm, vspace_t *loader, seL4_CPtr iospace)
@@ -173,6 +202,15 @@ int vm_init_guest_vspace(vspace_t *loader, vspace_t *vmm, vspace_t *new_vspace, 
     vspace->num_iospaces = 0;
     vspace->iospaces = malloc(0);
     assert(vspace->iospaces);
+#ifdef CONFIG_LIB_SEL4VM_USE_TRANSLATION_VSPACE
+    vspace->vmm_vspace = *vmm;
+    error = sel4utils_get_vspace(loader, &vspace->translation_vspace, &vspace->translation_vspace_data, vka, page_directory,
+                                 NULL, NULL);
+    if (error) {
+        ZF_LOGE("Failed to create translation vspace");
+        return error;
+    }
+#endif
     error = sel4utils_get_empty_vspace_with_map(loader, new_vspace, &vspace->vspace_data, vka, page_directory, NULL, NULL,
                                                 guest_vspace_map);
     if (error) {
