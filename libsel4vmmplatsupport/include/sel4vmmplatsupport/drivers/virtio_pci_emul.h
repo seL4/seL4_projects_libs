@@ -13,11 +13,11 @@
 #include <satadrivers/raw.h>
 #include <sel4vmmplatsupport/drivers/virtio_pci_console.h>
 #include <sel4vm/guest_vm.h>
-#include <ethdrivers/virtio/virtio_ring.h>
-#include <ethdrivers/virtio/virtio_pci.h>
-#include <ethdrivers/virtio/virtio_net.h>
-#include <ethdrivers/virtio/virtio_con.h>
-#include <ethdrivers/virtio/virtio_config.h>
+#include <virtio/virtio_ring.h>
+#include <virtio/virtio_pci.h>
+#include <virtio/virtio_net.h>
+#include <virtio/virtio_con.h>
+#include <virtio/virtio_config.h>
 
 #define RX_QUEUE 0
 #define TX_QUEUE 1
