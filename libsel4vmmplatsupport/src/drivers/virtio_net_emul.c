@@ -237,7 +237,7 @@ bool net_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsign
         break;
     case VIRTIO_PCI_CONFIG_OFF(false) ... (VIRTIO_PCI_CONFIG_OFF(false) + VIRTIO_NET_CONFIG_MAC_SZ - 1):
         assert(size == 1);
-        *result = ((ethif_internal_t *)emul->internal)->mac[offset - 0x14];
+        *result = ((ethif_internal_t *)emul->internal)->mac[offset - VIRTIO_PCI_CONFIG_OFF(false)];
         handled = true;
         break;
     }
