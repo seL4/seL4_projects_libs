@@ -12,12 +12,14 @@
 #include <ethdrivers/raw.h>
 #include <satadrivers/raw.h>
 #include <sel4vmmplatsupport/drivers/virtio_pci_console.h>
+#include <sel4vmmplatsupport/drivers/virtio_pci_vsock.h>
 #include <sel4vm/guest_vm.h>
 #include <virtio/virtio_ring.h>
 #include <virtio/virtio_pci.h>
 #include <virtio/virtio_net.h>
 #include <virtio/virtio_con.h>
 #include <virtio/virtio_config.h>
+#include <virtio/virtio_vsock.h>
 
 #define RX_QUEUE 0
 #define TX_QUEUE 1
@@ -26,6 +28,7 @@ typedef enum virtio_pci_devices {
     VIRTIO_NET,
     VIRTIO_CONSOLE,
     VIRTIO_BLOCK,
+    VIRTIO_VSOCK,
 } virtio_pci_devices_t;
 
 #define VQUEUE_NUM_VRINGS (VIRTIO_CON_MAX_PORTS*2+2)
@@ -72,3 +75,5 @@ void *net_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, ethif_driver
 void *console_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, console_driver_init driver, void *config);
 
 void *block_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, diskif_driver_init driver, void *config);
+
+void *vsock_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, vsock_driver_init driver, void *config);
