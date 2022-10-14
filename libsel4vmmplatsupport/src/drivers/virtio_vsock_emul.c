@@ -7,11 +7,8 @@
 
 #include "virtio_emul_helpers.h"
 
-/* 4092 because the vsock_shmem_t struct has to be 0x1000 bytes big (see virtio_vsock.c) */
-#define BUFSIZE 4092
-
 /* Temporary buffer used during TX */
-char buf[BUFSIZE];
+char buf[VIRTIO_VSOCK_CAMKES_MTU];
 
 typedef struct vsock_internal {
     struct vsock_passthrough driver;
@@ -85,8 +82,8 @@ static void vsock_handle_packet(virtio_emul_t *emul, void *buffer, unsigned int 
     int cid = packet->hdr.dst_cid;
 
     /* If we truncated the packet earlier, make sure header reflects new len */
-    if (len == BUFSIZE) {
-        packet->hdr.len = BUFSIZE - sizeof(struct virtio_vsock_hdr);
+    if (len == VIRTIO_VSOCK_CAMKES_MTU) {
+        packet->hdr.len = VIRTIO_VSOCK_CAMKES_MTU - sizeof(struct virtio_vsock_hdr);
     }
 
     vsock->driver.forward(cid, buffer, len);
@@ -116,11 +113,11 @@ static void emul_vsock_notify_tx(virtio_emul_t *emul)
             desc = ring_desc(emul, vring, desc_idx);
 
             /* truncate packets that are too large */
-            uint32_t this_len = MIN(BUFSIZE - len, desc.len);
+            uint32_t this_len = MIN(VIRTIO_VSOCK_CAMKES_MTU - len, desc.len);
             vm_guest_read_mem(emul->vm, buf + len, (uintptr_t)desc.addr, this_len);
             len += this_len;
             desc_idx = desc.next;
-        } while (desc.flags & VRING_DESC_F_NEXT && len < BUFSIZE);
+        } while (desc.flags & VRING_DESC_F_NEXT && len < VIRTIO_VSOCK_CAMKES_MTU);
 
         /* Handle the packet */
         vsock_handle_packet(emul, buf, len);
