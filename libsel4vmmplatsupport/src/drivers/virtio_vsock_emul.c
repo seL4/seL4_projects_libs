@@ -132,7 +132,8 @@ static void emul_vsock_notify_tx(virtio_emul_t *emul)
     virtq->last_idx[vsock->queue_num] = idx;
 }
 
-static bool vsock_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsigned int size, unsigned int *result)
+static bool vsock_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsigned int size,
+                                    unsigned int *result)
 {
     vsock_internal_t *vsock = emul->internal;
 
@@ -161,7 +162,8 @@ static bool vsock_device_emul_io_in(struct virtio_emul *emul, unsigned int offse
     return handled;
 }
 
-static bool vsock_device_emul_io_out(struct virtio_emul *emul, unsigned int offset, unsigned int size, unsigned int value)
+static bool vsock_device_emul_io_out(struct virtio_emul *emul, unsigned int offset, unsigned int size,
+                                     unsigned int value)
 {
     vsock_internal_t *vsock = emul->internal;
 
@@ -179,9 +181,9 @@ static bool vsock_device_emul_io_out(struct virtio_emul *emul, unsigned int offs
         if (value == RX_QUEUE) {
             /* Ignore RX packets for now (see virtio_emul.c) */
         } else if (value == EVENT_QUEUE) {
-            
+
         } else {
-            /* Generic TX handler, right now the event queue only gets 
+            /* Generic TX handler, right now the event queue only gets
              * notified when the guest wants the VMM to fill info in the
              * event queue */
             emul->notify(emul);

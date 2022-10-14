@@ -26,4 +26,3 @@ virtio_vsock_t *common_make_virtio_vsock(vm_t *vm,
                                          unsigned int interrupt_pin,
                                          unsigned int interrupt_line,
                                          struct vsock_passthrough backend);
-
