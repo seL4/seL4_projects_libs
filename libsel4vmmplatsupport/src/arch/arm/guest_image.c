@@ -209,7 +209,7 @@ static void *load_guest_kernel_image(vm_t *vm, const char *kernel_image_name, ui
     switch (ret_file_type) {
     case IMG_BIN:
         if (config_set(CONFIG_PLAT_TX1) || config_set(CONFIG_PLAT_TX2) || config_set(CONFIG_PLAT_QEMU_ARM_VIRT)
-            || config_set(CONFIG_PLAT_ODROIDC2)) {
+            || config_set(CONFIG_PLAT_ODROIDC2) || config_set(CONFIG_PLAT_ZYNQMP)) {
             /* This is likely an aarch64/aarch32 linux difference */
             load_addr = load_base_addr + 0x80000;
         } else {

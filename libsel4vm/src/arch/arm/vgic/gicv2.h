@@ -22,6 +22,8 @@
 #define GIC_PADDR   0x8000000
 #elif defined(CONFIG_PLAT_ODROIDC2)
 #define GIC_PADDR   0xc4300000
+#elif defined(CONFIG_PLAT_ZYNQMP)
+#define GIC_PADDR   0xf9000000
 #else
 #error "Unsupported platform for GIC"
 #endif
@@ -31,6 +33,11 @@
 #define GIC_CPU_PADDR        (GIC_PADDR + 0x00010000)
 #define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x00030000)
 #define GIC_VCPU_PADDR       (GIC_PADDR + 0x00040000)
+#elif defined(CONFIG_PLAT_ZYNQMP)
+#define GIC_DIST_PADDR       (GIC_PADDR + 0x10000)
+#define GIC_CPU_PADDR        (GIC_PADDR + 0x20000)
+#define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x40000)
+#define GIC_VCPU_PADDR       (GIC_PADDR + 0x60000)
 #else
 #define GIC_DIST_PADDR       (GIC_PADDR + 0x1000)
 #define GIC_CPU_PADDR        (GIC_PADDR + 0x2000)
