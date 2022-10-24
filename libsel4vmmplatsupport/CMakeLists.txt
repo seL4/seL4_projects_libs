@@ -61,6 +61,7 @@ target_link_libraries(
     fdt
     fdtgen
     satadrivers
+    ringbuffer
     sel4_autoconf
     sel4vm_Config
     usbdrivers_Config
