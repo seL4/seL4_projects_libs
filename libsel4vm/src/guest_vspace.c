@@ -43,6 +43,14 @@ static int guest_vspace_map(vspace_t *vspace, seL4_CPtr cap, void *vaddr, seL4_C
     }
 
 #if defined(CONFIG_TK1_SMMU) || defined(CONFIG_IOMMU)
+    /* If an object doesn't have Read or Write access, there isn't a reason to put
+     * it in DMA space
+     */
+    if (rights.words[0] == seL4_NoRights.words[0]) {
+        ZF_LOGW("Don't put object without RW access into DMA space");
+        return 0;
+    }
+
     struct sel4utils_alloc_data *data = get_alloc_data(vspace);
     /* this type cast works because the alloc data was at the start of the struct
      * so it has the same address.
