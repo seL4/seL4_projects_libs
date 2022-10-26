@@ -134,7 +134,15 @@ static int get_guest_image_type(const char *image_name, enum img_type *image_typ
 
 static int guest_write_address(vm_t *vm, uintptr_t paddr, void *vaddr, size_t size, size_t offset, void *cookie)
 {
-    memcpy(vaddr, cookie + offset, size);
+    int fd = *((int *)cookie);
+
+    /* Load the image */
+    size_t len = read(fd, vaddr, size);
+    if (len != size) {
+        ZF_LOGE("Bytes read from the file server (%d) don't match expected length (%d)", len, size);
+        return -1;
+    }
+
     if (config_set(CONFIG_PLAT_TX1) || config_set(CONFIG_PLAT_TX2)) {
         seL4_CPtr cap = vspace_get_cap(&vm->mem.vmm_vspace, vaddr);
         if (cap == seL4_CapNull) {
@@ -151,45 +159,31 @@ static int guest_write_address(vm_t *vm, uintptr_t paddr, void *vaddr, size_t si
 static int load_image(vm_t *vm, const char *image_name, uintptr_t load_addr,  size_t *resulting_image_size)
 {
     int fd;
-    size_t len;
     int error;
+
     fd = open(image_name, 0);
     if (fd == -1) {
         ZF_LOGE("Error: Unable to find image \'%s\'", image_name);
         return -1;
     }
 
-    /* Try and load the image 1MiB at a time. Reduce the size by half if
-     * there isn't enough memory available.  The total loading time may be
-     * faster if a larger buffer is used as it allows for more batching.
-     */
-    size_t read_size = BIT(20);
-    char *buf = malloc(read_size);
-    while (buf == NULL) {
-        read_size /= 2;
-        if (read_size < 4096) {
-            ZF_LOGE("Not enough memory for copy buffer");
-        }
-        buf = malloc(read_size);
+    size_t file_size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+
+    if (0 == file_size) {
+        ZF_LOGE("Error: \'%s\' has zero size", image_name);
+        return -1;
     }
-    size_t offset = 0;
-    while (1) {
-        /* Load the image */
-        len = read(fd, buf, read_size);
-        if (!len) {
-            break;
-        }
-        vm_ram_mark_allocated(vm, load_addr + offset, len);
-        error = vm_ram_touch(vm, load_addr + offset, len, guest_write_address, (void *)buf);
-        if (error) {
-            ZF_LOGE("Error: Failed to load \'%s\'", image_name);
-            close(fd);
-            return -1;
-        }
-        offset += len;
+
+    vm_ram_mark_allocated(vm, load_addr, ROUND_UP(file_size, PAGE_SIZE_4K));
+    error = vm_ram_touch(vm, load_addr, file_size, guest_write_address, (void *)&fd);
+    if (error) {
+        ZF_LOGE("Error: Failed to load \'%s\'", image_name);
+        close(fd);
+        return -1;
     }
-    free(buf);
-    *resulting_image_size = offset;
+
+    *resulting_image_size = file_size;
     close(fd);
     return 0;
 }
