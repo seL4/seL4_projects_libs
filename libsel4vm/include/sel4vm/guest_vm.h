@@ -203,6 +203,9 @@ struct vm {
     char *vm_name;
     unsigned int vm_id;
     bool vm_initialised;
+
+    char *gic_path;
+    void *fdt_ori;
 };
 
 /***
