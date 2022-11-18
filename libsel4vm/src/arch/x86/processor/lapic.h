@@ -45,6 +45,9 @@ typedef struct vm_lapic {
 
     enum vm_lapic_state state;
     int arb_prio;
+
+    /* back pointer */
+    vm_vcpu_t *vcpu;
 } vm_lapic_t;
 
 int vm_apic_enabled(vm_lapic_t *apic);

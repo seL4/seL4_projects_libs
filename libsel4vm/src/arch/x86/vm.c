@@ -20,7 +20,7 @@
 #include <sel4vm/guest_vm_exits.h>
 
 #include "vm.h"
-#include "i8259/i8259.h"
+#include "processor/i8259.h"
 
 #include "interrupt.h"
 #include "guest_state.h"
@@ -190,8 +190,7 @@ int vm_run_arch(vm_t *vm)
                 err = vm->run.notification_callback(vm, badge, tag, vm->run.notification_callback_cookie);
                 if (err == -1) {
                     ret = VM_EXIT_HANDLE_ERROR;
-                } else if (i8259_has_interrupt(vm)) {
-                    /* Check if this caused PIC to generate interrupt */
+                } else {
                     vm_check_external_interrupt(vm);
                 }
             } else {

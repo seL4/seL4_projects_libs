@@ -86,6 +86,7 @@
 #define     APIC_ICR_RR_INVALID 0x00000
 #define     APIC_ICR_RR_INPROG  0x10000
 #define     APIC_ICR_RR_VALID   0x20000
+#define     APIC_INT_EDGETRIG   0x00000
 #define     APIC_INT_LEVELTRIG  0x08000
 #define     APIC_INT_ASSERT     0x04000
 #define     APIC_ICR_BUSY       0x01000
@@ -108,15 +109,21 @@
 #define APIC_LVTTHMR    0x330
 #define APIC_LVTPC  0x340
 #define APIC_LVT0   0x350
+
+/* This mask is shifted by 18 due to the i82489DX not using the TSC bit in the LVTT, ignore */
 #define     APIC_LVT_TIMER_BASE_MASK    (0x3 << 18)
 #define     GET_APIC_TIMER_BASE(x)      (((x) >> 18) & 0x3)
 #define     SET_APIC_TIMER_BASE(x)      (((x) << 18))
+
 #define     APIC_TIMER_BASE_CLKIN       0x0
 #define     APIC_TIMER_BASE_TMBASE      0x1
 #define     APIC_TIMER_BASE_DIV     0x2
+
+#define     APIC_LVT_TIMER_MASK         (0x3 << 17)
 #define     APIC_LVT_TIMER_ONESHOT      (0 << 17)
 #define     APIC_LVT_TIMER_PERIODIC     (BIT(17))
 #define     APIC_LVT_TIMER_TSCDEADLINE  (2 << 17)
+
 #define     APIC_LVT_MASKED         (BIT(16))
 #define     APIC_LVT_LEVEL_TRIGGER      (BIT(15))
 #define     APIC_LVT_REMOTE_IRR     (BIT(14))

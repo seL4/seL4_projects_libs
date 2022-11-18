@@ -27,11 +27,13 @@
 #include <sel4vm/guest_vm.h>
 #include <sel4vm/boot.h>
 #include <sel4vm/guest_vcpu_fault.h>
+#include <sel4vm/guest_irq_controller.h>
+#include <sel4vm/arch/guest_x86_irq_controller.h>
 
 #include "processor/lapic.h"
 #include "processor/apicdef.h"
 #include "processor/msr.h"
-#include "i8259/i8259.h"
+#include "i8259.h"
 #include "interrupt.h"
 
 #define APIC_BUS_CYCLE_NS 1
@@ -49,6 +51,9 @@
 #define APIC_DEST_MASK          0x800
 #define MAX_APIC_VECTOR         256
 #define APIC_VECTORS_PER_REG        32
+
+/* This needs to be generalised to per-cpu for SMP support */
+irq_info_t irq_info[I8259_NR_IRQS + LAPIC_NR_IRQS];
 
 inline static int pic_get_interrupt(vm_t *vm)
 {
@@ -294,7 +299,7 @@ static inline int apic_find_highest_irr(vm_lapic_t *apic)
 static inline void apic_set_irr(int vec, vm_lapic_t *apic)
 {
     if (vec != 0x30) {
-        apic_debug(5, "!settting irr 0x%x\n", vec);
+        apic_debug(5, "!setting irr 0x%x\n", vec);
     }
 
     apic->irr_pending = true;
@@ -388,6 +393,7 @@ void vm_apic_update_tmr(vm_vcpu_t *vcpu, uint32_t *tmr)
 
 static void apic_update_ppr(vm_vcpu_t *vcpu)
 {
+    /* Intel SDM 10.8.3.1 Task and Processor Priorities */
     uint32_t tpr, isrv, ppr, old_ppr;
     int isr;
     vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
@@ -549,7 +555,12 @@ static int __apic_accept_irq(vm_vcpu_t *vcpu, int delivery_mode,
         if (!vm_apic_enabled(apic)) {
             break;
         }
-        apic_debug(4, "####fixed ipi 0x%x to vcpu %d\n", vector, vcpu->vcpu_id);
+
+        /** Note: lapic.c currently assumes all trigger mode for lowest/fixed interrupt
+         * to be edge triggered, which is why the APIC_TMR register is not cleared.
+        */
+
+        apic_debug(4, "###fixed int 0x%x to vcpu %d\n", vector, vcpu->vcpu_id);
 
         result = 1;
         apic_set_irr(vector, apic);
@@ -625,6 +636,15 @@ static int apic_set_eoi(vm_vcpu_t *vcpu)
         return vector;
     }
 
+    if (vector < NR_IRQS && irq_info[vector].callback) {
+        /* These callbacks are only setup for the PIC and APIC. For MSIs, the
+         * guest will choose what vector the interrupts head to and typically
+         * above 32 (our max supported irqs). Plus I don't think the MSIs need
+         * an explicit EOI signal.
+         * TODO: investigate */
+        irq_info[vector].callback(vcpu, vector, (void *) irq_info[vector].cookie);
+    }
+
     apic_clear_isr(vector, apic);
     apic_update_ppr(vcpu);
 
@@ -678,6 +698,9 @@ static uint32_t __apic_read(vm_lapic_t *apic, unsigned int offset)
     case APIC_TMCCT:    /* Timer CCR */
         break;
     case APIC_PROCPRI:
+        /* TODO: unknown if this is needed, Xen does not update PPR
+         * while KVM does when reading the PROCPRI register */
+        // apic_update_ppr(apic->vcpu);
         val = vm_apic_get_reg(apic, offset);
         break;
     default:
@@ -763,7 +786,7 @@ static int apic_reg_write(vm_vcpu_t *vcpu, uint32_t reg, uint32_t val)
     case APIC_LVTPC:
     case APIC_LVT1:
     case APIC_LVTERR:
-        /* TODO: Check vector */
+        /* KVM TODO: Check vector */
         if (!vm_apic_sw_enabled(apic)) {
             val |= APIC_LVT_MASKED;
         }
@@ -783,6 +806,13 @@ static int apic_reg_write(vm_vcpu_t *vcpu, uint32_t reg, uint32_t val)
 
     case APIC_TDCR:
         apic_set_reg(apic, APIC_TDCR, val);
+    
+    case APIC_ESR:
+        /**
+         * Writing to the APIC ESR clears the ESR according to Pentium errata 3AP.
+         * Linux does it on purpose (lmao) so we must support, I guess.
+        */
+        apic_set_reg(apic, APIC_ESR, 0);
         break;
 
     default:
@@ -813,7 +843,7 @@ void vm_apic_mmio_write(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
     /* too common printing */
     if (offset != APIC_EOI)
         apic_debug(6, "lapic mmio write at %s: offset 0x%x with length 0x%x, and value is "
-                   "0x%x\n", __func__, offset, len, data);
+                    "0x%x\n", __func__, offset, len, data);
 
     apic_reg_write(vcpu, offset & 0xff0, data);
 }
@@ -862,7 +892,7 @@ void vm_apic_mmio_read(vm_vcpu_t *vcpu, void *cookie, uint32_t offset,
 
     apic_reg_read(apic, offset, len, data);
 
-    apic_debug(6, "lapic mmio read on vcpu %d, reg %08x = %08x\n", vcpu->vcpu_id, offset, *data);
+    apic_debug(6, "lapic mmio read on vcpu %d, reg 0x%x = 0x%x\n", vcpu->vcpu_id, offset, *data);
 
     return;
 }
@@ -872,11 +902,11 @@ memory_fault_result_t apic_fault_callback(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t f
 {
     uint32_t data;
     if (is_vcpu_read_fault(vcpu)) {
-        vm_apic_mmio_read(vcpu, cookie, APIC_DEFAULT_PHYS_BASE - fault_addr, fault_length, &data);
+        vm_apic_mmio_read(vcpu, cookie, fault_addr - APIC_DEFAULT_PHYS_BASE, fault_length, &data);
         set_vcpu_fault_data(vcpu, data);
     } else {
         data = get_vcpu_fault_data(vcpu);
-        vm_apic_mmio_write(vcpu, cookie, APIC_DEFAULT_PHYS_BASE - fault_addr, fault_length, data);
+        vm_apic_mmio_write(vcpu, cookie, fault_addr - APIC_DEFAULT_PHYS_BASE, fault_length, data);
     }
     advance_vcpu_fault(vcpu);
     return FAULT_HANDLED;
@@ -940,24 +970,30 @@ void vm_lapic_reset(vm_vcpu_t *vcpu)
     vm_apic_set_id(apic, vcpu->vcpu_id); /* In agreement with ACPI code */
     apic_set_reg(apic, APIC_LVR, APIC_VERSION);
 
-    for (i = 0; i < APIC_LVT_NUM; i++) {
-        apic_set_reg(apic, APIC_LVTT + 0x10 * i, APIC_LVT_MASKED);
-    }
-
-    apic_set_reg(apic, APIC_DFR, 0xffffffffU);
-    apic_set_spiv(apic, 0xff);
-    apic_set_reg(apic, APIC_TASKPRI, 0);
-    vm_apic_set_ldr(apic, 0);
-    apic_set_reg(apic, APIC_ESR, 0);
-    apic_set_reg(apic, APIC_ICR, 0);
-    apic_set_reg(apic, APIC_ICR2, 0);
-    apic_set_reg(apic, APIC_TDCR, 0);
-    apic_set_reg(apic, APIC_TMICT, 0);
     for (i = 0; i < 8; i++) {
         apic_set_reg(apic, APIC_IRR + 0x10 * i, 0);
         apic_set_reg(apic, APIC_ISR + 0x10 * i, 0);
         apic_set_reg(apic, APIC_TMR + 0x10 * i, 0);
     }
+    apic_set_reg(apic, APIC_ICR, 0);
+    apic_set_reg(apic, APIC_ICR2, 0);
+    apic_set_reg(apic, APIC_ESR, 0);
+
+    /* Clear the LDR (unless in x2APIC mode) */
+    apic_set_reg(apic, APIC_LDR, 0);
+    apic_set_reg(apic, APIC_TASKPRI, 0);
+    apic_set_reg(apic, APIC_TMICT, 0);
+    apic_set_reg(apic, APIC_TMCCT, 0);
+    apic_set_reg(apic, APIC_TDCR, 0);
+
+    apic_set_reg(apic, APIC_DFR, 0xffffffffU);
+
+    for (i = 0; i < APIC_LVT_NUM; i++) {
+        apic_set_reg(apic, APIC_LVTT + 0x10 * i, APIC_LVT_MASKED);
+    }
+
+    apic_set_spiv(apic, 0xff);
+
     apic->irr_pending = 0;
     apic->isr_count = 0;
     apic->highest_isr_cache = -1;
@@ -996,7 +1032,7 @@ int vm_create_lapic(vm_vcpu_t *vcpu, int enabled)
 
     vcpu->vcpu_arch.lapic = apic;
 
-    apic->regs = calloc(1, sizeof(struct local_apic_regs)); // TODO this is a page; allocate a page
+    apic->regs = calloc(1, PAGE_SIZE_4K);
     if (!apic->regs) {
         printf("calloc apic regs error for vcpu %x\n",
                vcpu->vcpu_id);
@@ -1011,6 +1047,8 @@ int vm_create_lapic(vm_vcpu_t *vcpu, int enabled)
 
     /* mainly init registers */
     vm_lapic_reset(vcpu);
+
+    apic->vcpu = vcpu;
 
     return 0;
 nomem_free_apic:
@@ -1051,7 +1089,12 @@ int vm_apic_get_interrupt(vm_vcpu_t *vcpu)
 /* Return which vector is next up for servicing */
 int vm_apic_has_interrupt(vm_vcpu_t *vcpu)
 {
+    /* Early boot sequence apic might not be set up yet */
     vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
+    if (!apic) {
+        return -1;
+    }
+
     int highest_irr;
 
     if (vm_apic_accept_pic_intr(vcpu) && pic_has_interrupt(vcpu->vm)) {
@@ -1059,15 +1102,18 @@ int vm_apic_has_interrupt(vm_vcpu_t *vcpu)
     }
 
     highest_irr = apic_find_highest_irr(apic);
-    if ((highest_irr == -1) ||
-        ((highest_irr & 0xF0) <= vm_apic_get_reg(apic, APIC_PROCPRI))) {
+    if (highest_irr == -1) {
+        return -1;
+    }
+
+    uint32_t ppr = vm_apic_get_reg(apic, APIC_PROCPRI);
+    if ((highest_irr & 0xF0) <= vm_apic_get_reg(apic, APIC_PROCPRI)) {
         return -1;
     }
 
     return highest_irr;
 }
 
-#if 0
 int vm_apic_local_deliver(vm_vcpu_t *vcpu, int lvt_type)
 {
     vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
@@ -1082,4 +1128,37 @@ int vm_apic_local_deliver(vm_vcpu_t *vcpu, int lvt_type)
     }
     return 0;
 }
-#endif
+
+int vm_inject_irq(vm_vcpu_t *vcpu, int irq)
+{
+    /* if legacy irq send to PIC */
+    if (irq < I8259_NR_IRQS) {
+        return i8259_inject_irq(vcpu, irq);
+    }
+
+    int vector, delivery_mode, level, trig_mode;
+
+        /* Not sure what this should be programmed, just leaving it as fixed
+         * edge triggered for now. */
+        vector = irq;
+        delivery_mode = APIC_DM_FIXED;
+        trig_mode = APIC_INT_EDGETRIG;
+        level = 0; /* Ignored if edge trig */
+
+    vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
+
+    int ret = __apic_accept_irq(vcpu, delivery_mode, vector, level, trig_mode, NULL);
+    return (ret) ? 0 : 1;
+}
+
+int vm_register_irq(vm_vcpu_t *vcpu, int irq, irq_ack_fn_t fn, void *cookie)
+{
+    /* if legacy irq send to PIC to deal with*/
+    if (irq < I8259_NR_IRQS) {
+        return i8259_register_irq(vcpu, irq, fn, cookie);
+    }
+    irq_info_t *info = &irq_info[irq];
+    info->callback = fn;
+    info->cookie = (x86_irq_cookie_t *) cookie;
+    return 0;
+}

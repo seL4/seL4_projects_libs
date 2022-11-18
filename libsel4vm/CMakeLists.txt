@@ -47,7 +47,6 @@ file(
         sources
         src/*.c
         src/arch/${KernelArch}/*.c
-        src/arch/${KernelArch}/i8259/*.c
         src/arch/${KernelArch}/processor/*.c
         src/sel4_arch/${KernelSel4Arch}/*.c
 )
@@ -67,6 +66,7 @@ target_include_directories(
 )
 target_link_libraries(
     sel4vm
+    sel4vmmplatsupport
     muslc
     sel4
     sel4simple
