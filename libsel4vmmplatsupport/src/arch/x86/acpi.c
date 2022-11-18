@@ -151,7 +151,7 @@ int make_guest_acpi_tables(vm_t *vm)
 
     // MADT
     int madt_size = sizeof(acpi_madt_t)
-                    /* + sizeof(acpi_madt_ioapic_t)*/
+                    // + sizeof(acpi_madt_ioapic_t)
                     + sizeof(acpi_madt_local_apic_t) * cpus;
     acpi_madt_t *madt = calloc(1, madt_size);
     acpi_fill_table_head(&madt->header, "APIC", 3);
@@ -180,7 +180,7 @@ int make_guest_acpi_tables(vm_t *vm)
                 .type = ACPI_APIC_LOCAL,
                 .length = sizeof(acpi_madt_local_apic_t)
             },
-            .processor_id = i + 1,
+            .processor_id = i,
             .apic_id = i,
             .flags = APIC_FLAGS_ENABLED
         };
@@ -213,12 +213,13 @@ int make_guest_acpi_tables(vm_t *vm)
     }
 
     uintptr_t xsdt_addr = lower_bios_addr + (XSDT_START - LOWER_BIOS_START);
+    uintptr_t xsdt_paddr = XSDT_START;
 
     acpi_xsdt_t *xsdt = calloc(1, xsdt_size);
     acpi_fill_table_head(&xsdt->header, "XSDT", 1);
 
     // Add previous tables to XSDT pointer list
-    uintptr_t table_paddr = xsdt_addr + xsdt_size;
+    uintptr_t table_paddr = xsdt_paddr + xsdt_size;
     uint64_t *entry = (uint64_t *)((char *)xsdt + sizeof(acpi_xsdt_t));
     for (int i = 1; i < num_tables; i++) {
         *entry++ = (uint64_t)table_paddr;
@@ -247,11 +248,11 @@ int make_guest_acpi_tables(vm_t *vm)
         .oem_id = "NICTA ",
         .revision = 2, /* ACPI v3*/
         .checksum = 0,
-        .rsdt_address = xsdt_addr,
+        .rsdt_address = xsdt_paddr,
         /* rsdt_addrss will not be inspected as the xsdt is present.
            This is not ACPI 1 compliant */
         .length = sizeof(acpi_rsdp_t),
-        .xsdt_address = xsdt_addr,
+        .xsdt_address = xsdt_paddr,
         .extended_checksum = 0,
         .reserved = {0}
     };
