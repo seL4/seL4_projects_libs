@@ -13,8 +13,12 @@
 #include <pci/helper.h>
 
 #include <sel4vmmplatsupport/drivers/pci_helper.h>
+#include <sel4vmmplatsupport/drivers/pci_msi.h>
+
+#include <sel4vm/arch/guest_x86_irq_controller.h>
 
 #define PCI_CAPABILITY_SPACE_OFFSET 0x40
+#define PCI_MSI_CAP_SIZE 0x18
 
 /* Read PCI memory device */
 int vmm_pci_mem_device_read(void *cookie, int offset, int size, uint32_t *result)
@@ -200,6 +204,56 @@ static int pci_irq_emul_write(void *cookie, int offset, int size, uint32_t value
     }
 }
 
+static int pci_msi_emul_read(void *cookie, int offset, int size, uint32_t *result)
+{
+    /* No need to patch values, just passthrough */
+    pci_msi_emulation_t *emul = (pci_msi_emulation_t *)cookie;
+    return emul->passthrough.ioread(emul->passthrough.cookie, offset, size, result);
+}
+
+static int pci_msi_emul_write(void *cookie, int offset, int size, uint32_t value)
+{
+    pci_msi_emulation_t *emul = (pci_msi_emulation_t *)cookie;
+    if (offset >= emul->msi_cap_offset && offset < emul->msi_cap_offset + PCI_MSI_CAP_SIZE) {
+        /* Patch our values in before writing */
+        uint8_t msi_cap_offset = emul->msi_cap_offset;
+
+        pci_msi_control_t msi_control;
+        emul->passthrough.ioread(emul->passthrough.cookie, msi_cap_offset, 2, &msi_control);
+
+        if (msi_control.addr_64_bit && offset - msi_cap_offset == 0x8) {
+            /* Right now we specify the exact APIC this MSI is delivered to
+            * and as such the top bits are not set */
+            value = 0;
+        } else if (offset - msi_cap_offset == 0x8 || offset - msi_cap_offset == 0xC) {
+            /* If 64-bit addressing is enabled, the data register is at 0xC, else 0x8
+            * refer to: PCI local specification 2.2 */
+            pci_msi_data_t *msi_data = (pci_msi_data_t *) &value;
+
+            /* The guest OS may program an invalid vector into the MSI vector
+            * in which case we want to leave it alone, or the device will attempt
+            * a DMA into a vector that's not set up yet. */
+            // ZF_LOGE("Vector %d, Delivery Mode 0x%x, Trigger Mode %d", value & 0xff, (value >> 8) & 0b111, (value >> 15) & 1);
+            if (msi_data->vector == 0 || msi_data->vector == 239) {
+                /* Do nothing if MSI vector not a sane value (hardcoded to linux right now) */
+            } else {
+                /* Save the data so we can patch it in later when the irq arrives. */
+                vm_irq_set_msi_data(emul->vmm_irq, msi_data);
+                msi_data->vector = USER_IRQ_TO_CPU_VECTOR(emul->vmm_irq);
+            }
+            // ZF_LOGE("Vector %d, Delivery Mode 0x%x, Trigger Mode %d", value & 0xff, (value >> 8) & 0b111, (value >> 15) & 1);
+        } else if (offset - msi_cap_offset == 0x4) {
+            pci_msi_addr_lo_t *addr = &value;
+            /* Set the destination to the physical APIC. This is the usual value
+            * but we need a way to obtain the value from boot ACPI tables
+            * and not make assumptions. */
+            addr->value = 0xfee00000;
+            // ZF_LOGE("Dest 0x%x, RH 0x%x, DM 0x%x\n", addr->destid_0_7, addr->redirect_hint, addr->dest_mode_logical);
+        }
+    }
+    return emul->passthrough.iowrite(emul->passthrough.cookie, offset, size, value);
+}
+
 static int pci_bar_emul_read(void *cookie, int offset, int size, uint32_t *result)
 {
     pci_bar_emulation_t *emul = (pci_bar_emulation_t *)cookie;
@@ -240,6 +294,18 @@ vmm_pci_entry_t vmm_pci_create_bar_emulation(vmm_pci_entry_t existing, int num_b
     memset(bar_emul->bar_writes, 0, sizeof(bar_emul->bar_writes));
     return (vmm_pci_entry_t) {
         .cookie = bar_emul, .ioread = pci_bar_emul_read, .iowrite = pci_bar_emul_write
+    };
+}
+
+vmm_pci_entry_t vmm_pci_create_msi_emulation(vmm_pci_entry_t existing, int vmm_irq, uint8_t msi_cap_offset)
+{
+    pci_msi_emulation_t *msi_emul = calloc(1, sizeof(*msi_emul));
+    assert(msi_emul);
+    msi_emul->passthrough = existing;
+    msi_emul->vmm_irq = vmm_irq;
+    msi_emul->msi_cap_offset = msi_cap_offset;
+    return (vmm_pci_entry_t) {
+        .cookie = msi_emul, .ioread = pci_msi_emul_read, .iowrite = pci_msi_emul_write
     };
 }
 
@@ -365,9 +431,10 @@ vmm_pci_entry_t vmm_pci_create_cap_emulation(vmm_pci_entry_t existing, int num_c
 
 #define MAX_CAPS 256
 
-vmm_pci_entry_t vmm_pci_no_msi_cap_emulation(vmm_pci_entry_t existing)
+vmm_pci_entry_t vmm_pci_cap_emulation(vmm_pci_entry_t existing, bool enable_msi, int vmm_irq)
 {
     uint32_t value;
+    uint8_t msi_cap_offset = 0;
     int UNUSED error;
     /* Ensure this is a type 0 device */
     value = 0;
@@ -398,11 +465,19 @@ vmm_pci_entry_t vmm_pci_no_msi_cap_emulation(vmm_pci_entry_t existing)
         error = existing.ioread(existing.cookie, value, 1, &cap_type);
         assert(!error);
         if (cap_type == PCI_CAP_ID_MSI) {
-            assert(num_ignore < 2);
-            ignore_start[num_ignore] = value;
-            ignore_end[num_ignore] = value + 20;
-            num_ignore++;
+            if (enable_msi) {
+                msi_cap_offset = (uint8_t) value & 0xff;
+                assert(num_caps < MAX_CAPS);
+                caps[num_caps] = (uint8_t)value;
+                num_caps++;
+            } else {
+                assert(num_ignore < 2);
+                ignore_start[num_ignore] = value;
+                ignore_end[num_ignore] = value + 20;
+                num_ignore++;
+            }
         } else if (cap_type == PCI_CAP_ID_MSIX) {
+            assert(num_ignore < 2);
             ignore_start[num_ignore] = value;
             ignore_end[num_ignore] = value + 8;
             num_ignore++;
@@ -414,9 +489,14 @@ vmm_pci_entry_t vmm_pci_no_msi_cap_emulation(vmm_pci_entry_t existing)
         error = existing.ioread(existing.cookie, value + 1, 1, &value);
         assert(!error);
     }
-    if (num_ignore > 0) {
-        return vmm_pci_create_cap_emulation(existing, num_caps, caps, num_ignore, ignore_start, ignore_end);
-    } else {
-        return existing;
+
+    if (enable_msi) {
+        existing = vmm_pci_create_msi_emulation(existing, vmm_irq, msi_cap_offset);
     }
+
+    if (num_ignore > 0) {
+        existing = vmm_pci_create_cap_emulation(existing, num_caps, caps, num_ignore, ignore_start, ignore_end);
+    }
+
+    return existing;
 }

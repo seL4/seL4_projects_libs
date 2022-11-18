@@ -1129,6 +1129,11 @@ int vm_apic_local_deliver(vm_vcpu_t *vcpu, int lvt_type)
     return 0;
 }
 
+void vm_irq_set_msi_data(int irq, pci_msi_data_t *msi_data)
+{
+    memcpy(&irq_info[irq].cookie->msi_cookie.data, msi_data, sizeof(*msi_data));
+}
+
 int vm_inject_irq(vm_vcpu_t *vcpu, int irq)
 {
     /* if legacy irq send to PIC */
@@ -1138,12 +1143,24 @@ int vm_inject_irq(vm_vcpu_t *vcpu, int irq)
 
     int vector, delivery_mode, level, trig_mode;
 
+    if (irq_info[irq].cookie->is_msi) {
+        /* If MSI we need to patch in the values the guest programmed originally */
+        pci_msi_data_t msi_data = irq_info[irq].cookie->msi_cookie.data;
+
+        /* The MSI data register and APIC ISR are practically the same.
+         * Even if they aren't MSIs are always fixed and edge triggered.*/
+        vector = msi_data.value & APIC_VECTOR_MASK;
+        delivery_mode = msi_data.value & APIC_DM_FIXED_MASK;
+        trig_mode = msi_data.value & APIC_INT_LEVELTRIG;
+        level = msi_data.value & APIC_INT_ASSERT; /* Ignored if edge trig */
+    } else {
         /* Not sure what this should be programmed, just leaving it as fixed
          * edge triggered for now. */
         vector = irq;
         delivery_mode = APIC_DM_FIXED;
         trig_mode = APIC_INT_EDGETRIG;
         level = 0; /* Ignored if edge trig */
+    }
 
     vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
 

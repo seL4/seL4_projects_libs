@@ -14,7 +14,31 @@
 #define LAPIC_NR_IRQS   14
 #define NR_IRQS         (I8259_NR_IRQS + LAPIC_NR_IRQS)
 
+/**
+ * seL4 vectors
+ * 
+ * For x86 there are 256 idt entries. Vectors are used to index
+ * into the idt and invoke interrupt handlers. This is how vectors
+ * are reserved in seL4:
+ * 
+ * 0 - 31       : system traps and exceptions (hardcoded)
+ * 32 - ...     : start of seL4 vectors
+ *  32 - 47     : PIC interrupts/kernel only
+ *  48          : start of user interrupts, when an irq is passed into an seL4
+ *                system call, the _vector_ it is assigned to is (irq + 48).
+ */
+#define USER_IRQ_TO_CPU_VECTOR(x) ((x) + 48)
+
+
+typedef struct x86_irq_msi_cookie {
+    /* The original MSI data the guest programmed. We copy
+     * this back on every irq injection. */
+    pci_msi_data_t data;
+} x86_irq_msi_cookie_t;
+
 typedef struct x86_irq_cookie {
+    bool is_msi;
+    x86_irq_msi_cookie_t msi_cookie;    /* Cookie for MSI interrupts */
     seL4_CPtr irq_cap;                  /* Cap to ack on after EOI signal from guest */
 } x86_irq_cookie_t;
 
@@ -24,3 +48,12 @@ typedef struct irq_info {
     x86_irq_cookie_t *cookie;
 } irq_info_t;
 
+/***
+ * @function vm_irq_set_msi_data(irq, msi_data)
+ * Save the msi data for an irq so we can patch values in later when the
+ * device invokes an msi.
+ * 
+ * @param {int} irq                     the msi's irq
+ * @param {pci_msi_data_t *} msi_data   the msi data we want to patch in later
+ */
+void vm_irq_set_msi_data(int irq, pci_msi_data_t *msi_data);
