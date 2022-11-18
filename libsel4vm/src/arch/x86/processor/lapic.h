@@ -7,6 +7,7 @@
 #pragma once
 
 #include <sel4vm/guest_memory.h>
+#include <sel4vmmplatsupport/arch/drivers/timer_emul.h>
 
 enum vm_lapic_state {
     LAPIC_STATE_NEW,
@@ -14,20 +15,28 @@ enum vm_lapic_state {
     LAPIC_STATE_RUN
 };
 
-#if 0
+#define MIN_TIMER_PERIOD_US 200
+
 struct vm_timer {
-    struct hrtimer timer;
-    int64_t period;                 /* unit: ns */
+    /* emulated timer representation */
+    struct timer_functions *timer_emul;
+    /* unit: ns */
+    int64_t period;
+    int64_t target_expiration;
+    /* mask that indicates what timer modes are supported */
     uint32_t timer_mode_mask;
+    /* current timer mode */
+    uint32_t timer_mode;
+    int pending;
+    /* we don't support tsc deadlines but keep some references */
     uint64_t tscdeadline;
-    atomic_t pending;           /* accumulated triggered timers */
 };
-#endif
 
 typedef struct vm_lapic {
     uint32_t apic_base; // BSP flag is ignored in this
 
-    //struct vm_timer lapic_timer;
+    /* Each local APIC implements a timer */
+    struct vm_timer lapic_timer;
     uint32_t divide_count;
 
     bool irr_pending;
@@ -72,4 +81,6 @@ memory_fault_result_t apic_fault_callback(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t f
 
 uint64_t vm_get_lapic_tscdeadline_msr(vm_vcpu_t *vcpu);
 void vm_set_lapic_tscdeadline_msr(vm_vcpu_t *vcpu, uint64_t data);
+
+void vm_apic_set_timer_and_update(vm_lapic_t *apic, struct timer_functions *timer_emul);
 

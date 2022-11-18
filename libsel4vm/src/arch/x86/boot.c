@@ -97,6 +97,11 @@ static int make_guest_page_dir(vm_t *vm)
                                             seL4_PageBits, seL4_AllRights, 1, make_guest_page_dir_continued, NULL);
 }
 
+void vm_assign_vcpu_timer(vm_vcpu_t *vcpu, struct timer_functions *timer_emul)
+{
+    vm_apic_set_timer_and_update(vcpu->vcpu_arch.lapic, timer_emul);
+}
+
 int vm_init_arch(vm_t *vm)
 {
     int err;
@@ -143,7 +148,7 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     int err;
     err = seL4_X86_VCPU_SetTCB(vcpu->vcpu.cptr, simple_get_tcb(vm->simple));
     assert(err == seL4_NoError);
-    /* All LAPICs are created enabled, in virtual wire mode */
+    /* All LAPICs are created enabled */
     vm_create_lapic(vcpu, 1);
     vcpu->vcpu_arch.guest_state = calloc(1, sizeof(guest_state_t));
     if (!vcpu->vcpu_arch.guest_state) {

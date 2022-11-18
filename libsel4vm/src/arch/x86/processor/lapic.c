@@ -29,6 +29,7 @@
 #include <sel4vm/guest_vcpu_fault.h>
 #include <sel4vm/guest_irq_controller.h>
 #include <sel4vm/arch/guest_x86_irq_controller.h>
+#include <platsupport/arch/tsc.h>
 
 #include "processor/lapic.h"
 #include "processor/apicdef.h"
@@ -40,6 +41,8 @@
 
 #define APIC_DEBUG 0
 #define apic_debug(lvl,...) do{ if(lvl < APIC_DEBUG){printf(__VA_ARGS__);fflush(stdout);}}while (0)
+
+#define mod_64(x, y) ((x) - (y) * ((x) / (y)))
 
 #define APIC_LVT_NUM            6
 /* 14 is the version for Xeon and Pentium 8.4.8*/
@@ -54,6 +57,30 @@
 
 /* This needs to be generalised to per-cpu for SMP support */
 irq_info_t irq_info[I8259_NR_IRQS + LAPIC_NR_IRQS];
+
+/* id used to identify this timer in the timer_server component */
+static int ts_id;
+static uint64_t tsc_frequency = 0;
+
+static int64_t current_time_ns()
+{
+    return (int64_t) muldivu64(rdtsc_pure(), NS_IN_S, tsc_frequency);
+}
+
+static inline uint64_t timer_tsc_freq(vm_lapic_t *apic)
+{
+    return apic->lapic_timer.timer_emul->tsc_freq();
+}
+
+static inline int timer_oneshot_absolute(vm_lapic_t *apic, uint64_t ns)
+{
+    return apic->lapic_timer.timer_emul->oneshot_absolute(ns);
+}
+
+static inline int timer_stop(vm_lapic_t *apic)
+{
+    return apic->lapic_timer.timer_emul->stop();
+}
 
 inline static int pic_get_interrupt(vm_t *vm)
 {
@@ -247,6 +274,21 @@ static void UNUSED dump_vector(const char *name, void *bitmap)
     }
 
     printf("\n");
+}
+
+static inline int apic_lvtt_oneshot(vm_lapic_t *apic)
+{
+    return apic->lapic_timer.timer_mode == APIC_LVT_TIMER_ONESHOT;
+}
+
+static inline int apic_lvtt_period(vm_lapic_t *apic)
+{
+    return apic->lapic_timer.timer_mode == APIC_LVT_TIMER_PERIODIC;
+}
+
+static inline int apic_lvtt_tscdeadline(vm_lapic_t *apic)
+{
+    return apic->lapic_timer.timer_mode == APIC_LVT_TIMER_TSCDEADLINE;
 }
 
 static int find_highest_vector(void *bitmap)
@@ -679,6 +721,29 @@ static void apic_send_ipi(vm_vcpu_t *vcpu)
     vm_irq_delivery_to_apic(vcpu, &irq, NULL);
 }
 
+static uint32_t apic_get_tmcct(vm_lapic_t *apic)
+{
+    int64_t remaining, now, ns;
+    uint32_t tmcct;
+
+    /* if initial count is 0, current count should also be 0 */
+    if (vm_apic_get_reg(apic, APIC_TMICT) == 0 ||
+        apic->lapic_timer.period == 0) {
+        return 0;
+    }
+
+    now = current_time_ns();
+    remaining = apic->lapic_timer.target_expiration - now;
+    if (remaining < 0) {
+        remaining = 0;
+    }
+
+    ns = mod_64(remaining, apic->lapic_timer.period);
+    tmcct = ns / (APIC_BUS_CYCLE_NS * apic->divide_count);
+
+    return tmcct;
+}
+
 static uint32_t __apic_read(vm_lapic_t *apic, unsigned int offset)
 {
     uint32_t val = 0;
@@ -695,7 +760,12 @@ static uint32_t __apic_read(vm_lapic_t *apic, unsigned int offset)
         apic_debug(2, "Access APIC ARBPRI register which is for P6\n");
         break;
 
-    case APIC_TMCCT:    /* Timer CCR */
+    case APIC_TMCCT:
+        if (apic_lvtt_tscdeadline(apic)) {
+            /* Shouldn't even get to here but just in case */
+            return 0;
+        }
+        // val = apic_get_tmcct(apic);
         break;
     case APIC_PROCPRI:
         /* TODO: unknown if this is needed, Xen does not update PPR
@@ -709,6 +779,213 @@ static uint32_t __apic_read(vm_lapic_t *apic, unsigned int offset)
     }
 
     return val;
+}
+
+static void vm_apic_inject_pending_timer_irqs(vm_lapic_t *apic)
+{
+    vm_apic_local_deliver(apic->vcpu, APIC_LVTT);
+    if (apic_lvtt_oneshot(apic)) {
+        apic->lapic_timer.tscdeadline = 0; // no clue why this is set to 0 tbh
+        apic->lapic_timer.target_expiration = 0;
+    }
+}
+
+static void apic_timer_expired(vm_lapic_t *apic, bool from_timer_fn)
+{
+    vm_vcpu_t *vcpu = apic->vcpu;
+
+    if (apic->lapic_timer.pending) {
+        // ZF_LOGE("Current pending timer IRQ");
+        return;
+    }
+
+    if (!from_timer_fn && vm_apic_enabled(apic)) {
+        vm_apic_inject_pending_timer_irqs(apic);
+        return;
+    }
+
+    vm_apic_inject_pending_timer_irqs(apic);
+    apic->lapic_timer.pending++;
+    if (from_timer_fn) {
+        vm_vcpu_accept_interrupt(vcpu);
+    }
+}
+
+static void update_divide_count(vm_lapic_t *apic)
+{
+    uint32_t tmp1, tmp2, tdcr;
+
+    tdcr = vm_apic_get_reg(apic, APIC_TDCR);
+    tmp1 = tdcr & 0xf;
+    tmp2 = ((tmp1 & 0x3) | ((tmp1 & 0x8) >> 1)) + 1;
+    apic->divide_count = 0x1 << (tmp2 & 0x7);
+}
+
+
+static void limit_periodic_timer_frequency(vm_lapic_t *apic)
+{
+    /*
+     * Do not allow the guest to program periodic timers with small
+     * interval (cuz that's what KVM does lmfao).
+     */
+    if (apic_lvtt_period(apic) && apic->lapic_timer.period) {
+        int64_t min_period = MIN_TIMER_PERIOD_US * 1000LL;
+
+        if (apic->lapic_timer.period < min_period) {
+            apic->lapic_timer.period = min_period;
+        }
+    }
+}
+
+static inline int64_t tmict_to_ns(vm_lapic_t *apic, uint32_t tmict)
+{
+    return (int64_t) tmict * APIC_BUS_CYCLE_NS * (int64_t) apic->divide_count;
+}
+
+static void update_target_expiration(vm_lapic_t *apic, uint32_t old_divisor)
+{
+    int64_t now, remaining, remaining_new;
+
+    apic->lapic_timer.period =
+            tmict_to_ns(apic, vm_apic_get_reg(apic, APIC_TMICT));
+    limit_periodic_timer_frequency(apic);
+
+    now = current_time_ns();
+    remaining = apic->lapic_timer.target_expiration - now;
+    if (remaining < 0) {
+        remaining = 0;
+    }
+
+    remaining_new = muldivu64(remaining, (uint64_t) apic->divide_count, old_divisor);
+    apic->lapic_timer.target_expiration = now + remaining_new;
+}
+
+static bool set_target_expiration(vm_lapic_t *apic, uint32_t count_reg)
+{
+    int64_t now = current_time_ns();
+    int64_t deadline;
+
+    apic->lapic_timer.period =
+            tmict_to_ns(apic, vm_apic_get_reg(apic, APIC_TMICT));
+    
+    if (!apic->lapic_timer.period) {
+        apic->lapic_timer.tscdeadline = 0;
+        return false;
+    }
+
+    limit_periodic_timer_frequency(apic);
+    deadline = apic->lapic_timer.period;
+
+    if (apic_lvtt_period(apic) || apic_lvtt_oneshot(apic)) {
+        if (unlikely(count_reg != APIC_TMICT)) {
+            deadline = tmict_to_ns(apic, vm_apic_get_reg(apic, count_reg));
+            if (unlikely(deadline <= 0)) {
+                deadline = apic->lapic_timer.period;
+            } else if (unlikely(deadline > apic->lapic_timer.period)) {
+                apic_set_reg(apic, count_reg, 0);
+                deadline = apic->lapic_timer.period;
+            }
+        }
+    }
+
+    /* KVM code for TSC deadline but we don't support. It's here
+     * in case anyone wants to try in the future. */
+#if 0
+    apic->lapic_timer.tscdeadline = kvm_read_l1_tsc(apic->vcpu, tscl) +
+        nsec_to_cycles(apic->vcpu, deadline);
+#endif
+    apic->lapic_timer.target_expiration = now + deadline;
+
+    return true;
+}
+
+static void apic_cancel_timer(vm_lapic_t *apic)
+{
+    timer_stop(apic);
+    apic->lapic_timer.pending = 0;
+}
+
+static void apic_update_lvtt(vm_lapic_t *apic)
+{
+    uint32_t timer_mode = vm_apic_get_reg(apic, APIC_LVTT) &
+            apic->lapic_timer.timer_mode_mask;
+
+    if (apic->lapic_timer.timer_mode != timer_mode) {
+        if (apic_lvtt_tscdeadline(apic) != (timer_mode ==
+                APIC_LVT_TIMER_TSCDEADLINE)) {
+            apic_cancel_timer(apic);
+            apic_set_reg(apic, APIC_TMICT, 0);
+            apic->lapic_timer.period = 0;
+            apic->lapic_timer.tscdeadline = 0;
+        }
+        apic->lapic_timer.timer_mode = timer_mode;
+        limit_periodic_timer_frequency(apic);
+    }
+}
+
+static void advance_periodic_target_expiration(vm_lapic_t *apic)
+{
+    /* KVM syncs the periodic and tsc deadline counters in this function
+     * but I've ommitted for brevity's sake. */
+    apic->lapic_timer.target_expiration += apic->lapic_timer.period;
+}
+
+static void start_period(vm_lapic_t *apic)
+{
+    if (!apic->lapic_timer.period)
+        return;
+
+    if (current_time_ns() > apic->lapic_timer.target_expiration) {
+        apic_timer_expired(apic, false);
+
+        if (apic_lvtt_oneshot(apic))
+            return;
+
+        advance_periodic_target_expiration(apic);
+    }
+
+    ZF_LOGE("Starting timer of period %ull", apic->lapic_timer.period);
+
+    timer_oneshot_absolute(apic, apic->lapic_timer.target_expiration);
+}
+
+static void start_timer(vm_lapic_t *apic)
+{
+    if (!apic_lvtt_period(apic) && apic->lapic_timer.period) {
+        return;
+    }
+
+    if (apic_lvtt_period(apic) || apic_lvtt_oneshot(apic)) {
+        start_period(apic);
+    } else {
+        /* TSC deadline unimplemented */
+    }
+}
+
+static void apic_restart_timer(vm_lapic_t *apic)
+{
+    if (!apic_lvtt_period(apic) && apic->lapic_timer.pending) {
+        return;
+    }
+
+    start_timer(apic);
+}
+
+static void __start_apic_timer(vm_lapic_t *apic, uint32_t count_reg)
+{
+    apic->lapic_timer.pending = 0;
+
+    if ((apic_lvtt_period(apic) || apic_lvtt_oneshot(apic))
+        && !set_target_expiration(apic, count_reg))
+        return;
+
+    apic_restart_timer(apic);
+}
+
+
+static void start_apic_timer(vm_lapic_t *apic)
+{
+    __start_apic_timer(apic, APIC_TMICT);
 }
 
 static void apic_manage_nmi_watchdog(vm_lapic_t *apic, uint32_t lvt0_val)
@@ -764,8 +1041,7 @@ static int apic_reg_write(vm_vcpu_t *vcpu, uint32_t reg, uint32_t val)
                 apic_set_reg(apic, APIC_LVTT + 0x10 * i,
                              lvt_val | APIC_LVT_MASKED);
             }
-            //    atomic_set(&apic->lapic_timer.pending, 0);
-
+            apic->lapic_timer.pending = 0;
         }
         break;
     }
@@ -797,15 +1073,41 @@ static int apic_reg_write(vm_vcpu_t *vcpu, uint32_t reg, uint32_t val)
         break;
 
     case APIC_LVTT:
+        /* Timer LVT */
+        ZF_LOGE("APIC_LVTT");
+        if (!vm_apic_sw_enabled(apic)) {
+            val |= APIC_LVT_MASKED;
+        }
+        val &= (apic_lvt_mask[0] | apic->lapic_timer.timer_mode_mask);
         apic_set_reg(apic, APIC_LVTT, val);
+        apic_update_lvtt(apic);
         break;
 
     case APIC_TMICT:
+        /* Timer initial count */
+        ZF_LOGE("APIC_TMICT");
+        if (apic_lvtt_tscdeadline(apic)) {
+            ZF_LOGE("TSC deadline should never be in use");
+            break;
+        }
+        apic_cancel_timer(apic);
         apic_set_reg(apic, APIC_TMICT, val);
+        start_apic_timer(apic);
         break;
 
     case APIC_TDCR:
+        /* Timer divide config */
+        ZF_LOGE("APIC_TDCR");
+        uint32_t old_divisor = apic->divide_count;
         apic_set_reg(apic, APIC_TDCR, val);
+        update_divide_count(apic);
+        if (apic->divide_count != old_divisor &&
+                apic->lapic_timer.period) {
+            timer_stop(apic);
+            update_target_expiration(apic, old_divisor);
+            apic_restart_timer(apic);
+        }
+        break;
     
     case APIC_ESR:
         /**
@@ -998,8 +1300,14 @@ void vm_lapic_reset(vm_vcpu_t *vcpu)
     apic->isr_count = 0;
     apic->highest_isr_cache = -1;
     apic_update_ppr(vcpu);
+    update_divide_count(apic);
+    apic->lapic_timer.pending = 0;
 
-    vcpu->vcpu_arch.lapic->arb_prio = 0;
+    apic->arb_prio = 0;
+
+    /* AMD does not implement the TSC deadline timer, so until we have AMD cpu
+     * virtualization, just don't implement the TSC */
+    apic->lapic_timer.timer_mode_mask = BIT(17);
 
     apic_debug(4, "%s: vcpu=%p, id=%d, base_msr="
                "0x%016x\n", __func__,
@@ -1127,6 +1435,29 @@ int vm_apic_local_deliver(vm_vcpu_t *vcpu, int lvt_type)
         return __apic_accept_irq(vcpu, mode, vector, 1, trig_mode, NULL);
     }
     return 0;
+}
+
+int vm_inject_timer_irq(vm_vcpu_t *vcpu)
+{
+    vm_lapic_t *apic = vcpu->vcpu_arch.lapic;
+    apic_timer_expired(apic, true);
+    apic->lapic_timer.pending = 0;
+
+    /* if period timer, slap that mf back alive */
+    if (apic_lvtt_period(apic)) {
+        advance_periodic_target_expiration(apic);
+        timer_oneshot_absolute(apic, apic->lapic_timer.target_expiration);
+    } else {
+        timer_stop(apic);
+    }
+
+    return 0;
+}
+
+void vm_apic_set_timer_and_update(vm_lapic_t *apic, struct timer_functions *timer_emul)
+{
+    apic->lapic_timer.timer_emul = timer_emul;
+    tsc_frequency = timer_tsc_freq(apic);
 }
 
 void vm_irq_set_msi_data(int irq, pci_msi_data_t *msi_data)

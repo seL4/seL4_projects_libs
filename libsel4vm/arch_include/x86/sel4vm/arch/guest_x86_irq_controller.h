@@ -49,6 +49,15 @@ typedef struct irq_info {
 } irq_info_t;
 
 /***
+ * @function vm_timer_inject_irq(vcpu)
+ * Inject an a timer IRQ. This is for when the IRQ controller handles the nitty-gritty
+ * IRQ assignments, and we have no way of telling where the timer IRQ is supposed to go.
+ * @param {vm_vcpu_t *} vcpu    Handle to the VCPU
+ * @return                      0 on success, otherwise -1 for error
+ */
+int vm_inject_timer_irq(vm_vcpu_t *vcpu);
+
+/***
  * @function vm_irq_set_msi_data(irq, msi_data)
  * Save the msi data for an irq so we can patch values in later when the
  * device invokes an msi.
