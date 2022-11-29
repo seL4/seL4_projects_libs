@@ -10,7 +10,7 @@
 #include "virtio_emul_helpers.h"
 
 #define VUART_BUFLEN 4088
-char buf[VUART_BUFLEN];
+static char buf[VUART_BUFLEN];
 
 typedef struct console_virtio_emul_internal {
     struct console_passthrough driver;

@@ -8,7 +8,7 @@
 #include "virtio_emul_helpers.h"
 
 /* Temporary buffer used during TX */
-char buf[VIRTIO_VSOCK_CAMKES_MTU];
+static char buf[VIRTIO_VSOCK_CAMKES_MTU];
 
 typedef struct vsock_internal {
     struct vsock_passthrough driver;
