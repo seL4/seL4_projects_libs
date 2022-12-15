@@ -11,7 +11,7 @@
 static char buf[VIRTIO_VSOCK_CAMKES_MTU];
 
 typedef struct vsock_internal {
-    struct vsock_passthrough driver;
+    struct virtio_vsock_driver driver;
     /* what queue did data come through? */
     int queue_num;
 } vsock_internal_t;
@@ -66,7 +66,7 @@ static void emul_vsock_rx_complete(virtio_emul_t *emul, char *buf, unsigned int 
         /* record that we've used this descriptor chain now */
         virtq->last_idx[RX_QUEUE]++;
         /* notify the guest that there is something in its used ring */
-        vsock->driver.injectIRQ(vsock->driver.vsock_data);
+        vsock->driver.backend_fn.injectIRQ(vsock->driver.backend_fn.vsock_data);
     }
 }
 
@@ -74,6 +74,10 @@ void vsock_rx_complete(virtio_emul_t *emul, char *buf, unsigned int len)
 {
     emul_vsock_rx_complete(emul, buf, len);
 }
+
+static virtio_vsock_callbacks_t emul_callbacks = {
+    .rx_complete = vsock_rx_complete
+};
 
 static void vsock_handle_packet(virtio_emul_t *emul, void *buffer, unsigned int len)
 {
@@ -86,7 +90,7 @@ static void vsock_handle_packet(virtio_emul_t *emul, void *buffer, unsigned int 
         packet->hdr.len = VIRTIO_VSOCK_CAMKES_MTU - sizeof(struct virtio_vsock_hdr);
     }
 
-    vsock->driver.forward(cid, buffer, len);
+    vsock->driver.backend_fn.forward(cid, buffer, len);
 }
 
 static void emul_vsock_notify_tx(virtio_emul_t *emul)
@@ -126,7 +130,7 @@ static void emul_vsock_notify_tx(virtio_emul_t *emul)
         idx++;
         struct vring_used_elem used_elem = {desc_head, 0};
         ring_used_add(emul, &virtq->vring[vsock->queue_num], used_elem);
-        vsock->driver.injectIRQ(vsock->driver.vsock_data);
+        vsock->driver.backend_fn.injectIRQ(vsock->driver.backend_fn.vsock_data);
     }
     /* update which parts of the ring we have processed */
     virtq->last_idx[vsock->queue_num] = idx;
@@ -151,7 +155,7 @@ static bool vsock_device_emul_io_in(struct virtio_emul *emul, unsigned int offse
 
         /* Set VIRTIO_VSOCK_CFG_GUEST_CID in little-endian */
         if (offset == VIRTIO_VSOCK_CFG_GUEST_CID) {
-            *result = vsock->driver.guest_cid;
+            *result = vsock->driver.backend_fn.guest_cid;
         } else {
             *result = 0;
         }
@@ -204,6 +208,7 @@ void *vsock_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, vsock_driv
     emul->notify = emul_vsock_notify_tx;
     emul->device_io_in = vsock_device_emul_io_in;
     emul->device_io_out = vsock_device_emul_io_out;
+    internal->driver.emul_cb = emul_callbacks;
 
     int err = driver(&internal->driver, io_ops, config);
     if (err) {

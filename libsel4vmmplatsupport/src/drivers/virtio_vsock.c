@@ -44,10 +44,11 @@ static int virtio_vsock_io_out(void *cookie, unsigned int port_no, unsigned int 
 }
 
 
-static int emul_vsock_driver_init(struct vsock_passthrough *driver, ps_io_ops_t io_ops, void *config)
+static int emul_vsock_driver_init(struct virtio_vsock_driver *driver, ps_io_ops_t io_ops, void *config)
 {
     virtio_vsock_t *vsock = (virtio_vsock_t *) config;
-    *driver = vsock->emul_driver_funcs;
+    driver->backend_fn = vsock->emul_driver_funcs;
+    vsock->emul_driver = driver;
     return 0;
 }
 
@@ -91,7 +92,7 @@ static vmm_pci_entry_t vmm_virtio_vsock_pci_bar(unsigned int iobase, size_t ioba
 
 virtio_vsock_t *common_make_virtio_vsock(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port_list_t *ioport,
                                          ioport_range_t ioport_range, ioport_type_t port_type, unsigned int interrupt_pin, unsigned int interrupt_line,
-                                         struct vsock_passthrough backend)
+                                         struct virtio_vsock_passthrough backend)
 {
     int err = ps_new_stdlib_malloc_ops(&ops.malloc_ops);
     ZF_LOGF_IF(err, "Failed to get malloc ops");

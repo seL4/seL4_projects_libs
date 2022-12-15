@@ -14,7 +14,8 @@
 typedef struct virtio_vsock {
     unsigned int iobase;
     virtio_emul_t *emul;
-    struct vsock_passthrough emul_driver_funcs;
+    struct virtio_vsock_driver *emul_driver;
+    struct virtio_vsock_passthrough emul_driver_funcs;
     ps_io_ops_t ioops;
 } virtio_vsock_t;
 
@@ -25,4 +26,4 @@ virtio_vsock_t *common_make_virtio_vsock(vm_t *vm,
                                          ioport_type_t port_type,
                                          unsigned int interrupt_pin,
                                          unsigned int interrupt_line,
-                                         struct vsock_passthrough backend);
+                                         struct virtio_vsock_passthrough backend);
