@@ -17,7 +17,7 @@
 static char buf[VUART_BUFLEN];
 
 typedef struct console_virtio_emul_internal {
-    struct console_passthrough driver;
+    struct virtio_console_driver driver;
     /* counter for console ports */
     unsigned int con_count;
     /* what queue did data come through? */
@@ -96,7 +96,7 @@ static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, uint
         /* record that we've used this descriptor chain now */
         virtq->last_idx[queue]++;
         /* notify the guest that there is something in its used ring */
-        con->driver.handleIRQ(con->driver.console_data);
+        con->driver.backend_fn.handleIRQ(con->driver.backend_fn.console_data);
     }
 }
 
@@ -120,6 +120,10 @@ void virtio_console_putchar(int port, virtio_emul_t *emul, char *buffer, uint32_
     emul_con_rx_complete(emul, vq_num, buffer, head, tail);
 }
 
+static virtio_console_callbacks_t emul_callbacks = {
+    .emul_putchar = virtio_console_putchar
+};
+
 /* Write to port attached to queue number */
 static void port_write(virtio_emul_t *emul, int queue, char *buffer, unsigned int len)
 {
@@ -134,7 +138,7 @@ static void port_write(virtio_emul_t *emul, int queue, char *buffer, unsigned in
 
     /* forward it */
     for (int i = 0; i < len; i++) {
-        con->driver.putchar(port, buffer[i]);
+        con->driver.backend_fn.backend_putchar(port, buffer[i]);
     }
 }
 
@@ -232,7 +236,7 @@ static void emul_con_notify_tx(virtio_emul_t *emul)
         idx++;
         struct vring_used_elem used_elem = {desc_head, 0};
         ring_used_add(emul, &virtq->vring[con->queue_num], used_elem);
-        con->driver.handleIRQ(con->driver.console_data);
+        con->driver.backend_fn.handleIRQ(con->driver.backend_fn.console_data);
     }
     /* update which parts of the ring we have processed */
     virtq->last_idx[con->queue_num] = idx;
@@ -299,16 +303,18 @@ void *console_virtio_emul_init(virtio_emul_t *emul, ps_io_ops_t io_ops, console_
         goto error;
     }
 
+    emul->device_io_in = console_device_emul_io_in;
+    emul->device_io_out = console_device_emul_io_out;
+    emul->notify = emul_con_notify_tx;
+    internal->con_count = 0;
+    internal->driver.emul_cb = emul_callbacks;
+
     err = driver(&internal->driver, io_ops, config);
     if (err) {
         ZF_LOGE("Failed to initialize driver");
         goto error;
     }
 
-    emul->device_io_in = console_device_emul_io_in;
-    emul->device_io_out = console_device_emul_io_out;
-    emul->notify = emul_con_notify_tx;
-    internal->con_count = 0;
     return (void *)internal;
 error:
     if (emul) {

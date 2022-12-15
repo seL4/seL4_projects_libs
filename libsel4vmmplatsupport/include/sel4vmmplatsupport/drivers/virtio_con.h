@@ -21,15 +21,17 @@
 /***
  * @struct virtio_con
  * Virtio Console Driver Interface
- * @param {unsigned int} iobase                             IO Port base for virtio con device
- * @param {virtio_emul_t *} emul                            Virtio console emulation interface: VMM <-> Guest
- * @param {struct console_passthrough} emul_driver_funcs    Virtio console emulation functions: VMM <-> Guest
- * @param {ps_io_ops_t} ioops                               Platform support io ops datastructure
+ * @param {unsigned int} iobase                                 IO Port base for virtio con device
+ * @param {virtio_emul_t *} emul                                Virtio console emulation interface: VMM <-> Guest
+ * @param {struct eth_driver *} emul_driver                     Backend console driver interface: VMM <-> console driver
+ * @param {struct virtio_console_passthrough} emul_driver_funcs Virtio console emulation functions: VMM <-> Guest
+ * @param {ps_io_ops_t} ioops                                   Platform support io ops datastructure
  */
 typedef struct virtio_con {
     unsigned int iobase;
     virtio_emul_t *emul;
-    struct console_passthrough emul_driver_funcs;
+    struct virtio_console_driver *emul_driver;
+    struct virtio_console_passthrough emul_driver_funcs;
     ps_io_ops_t ioops;
 } virtio_con_t;
 
@@ -55,4 +57,4 @@ virtio_con_t *common_make_virtio_con(vm_t *vm,
                                      ioport_type_t port_type,
                                      unsigned int interrupt_pin,
                                      unsigned int interrupt_line,
-                                     struct console_passthrough backend);
+                                     struct virtio_console_passthrough backend);

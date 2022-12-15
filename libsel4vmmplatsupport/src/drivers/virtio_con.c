@@ -42,10 +42,11 @@ static int virtio_con_io_out(void *cookie, unsigned int port_no, unsigned int si
     return 0;
 }
 
-static int emul_con_driver_init(struct console_passthrough *driver, ps_io_ops_t io_ops, void *config)
+static int emul_con_driver_init(struct virtio_console_driver *driver, ps_io_ops_t io_ops, void *config)
 {
     virtio_con_t *con = (virtio_con_t *)config;
-    *driver = con->emul_driver_funcs;
+    driver->backend_fn = con->emul_driver_funcs;
+    con->emul_driver = driver;
     return 0;
 }
 
@@ -88,7 +89,7 @@ static vmm_pci_entry_t vmm_virtio_console_pci_bar(unsigned int iobase,
 
 virtio_con_t *common_make_virtio_con(vm_t *vm, vmm_pci_space_t *pci, vmm_io_port_list_t *ioport,
                                      ioport_range_t ioport_range, ioport_type_t port_type, unsigned int interrupt_pin, unsigned int interrupt_line,
-                                     struct console_passthrough backend)
+                                     struct virtio_console_passthrough backend)
 {
     int err = ps_new_stdlib_malloc_ops(&ops.malloc_ops);
     ZF_LOGF_IF(err, "Failed to get malloc ops");
