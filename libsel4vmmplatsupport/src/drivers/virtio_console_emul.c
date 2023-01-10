@@ -9,7 +9,11 @@
 
 #include "virtio_emul_helpers.h"
 
-#define VUART_BUFLEN 4088
+/**
+ * The buffer size here should match BUFSIZE in vm/components/Init/src/virtio_con.c
+ * and vm/components/VM_Arm/src/modules/virtio_con.c
+ */
+#define VUART_BUFLEN (0x1000 - 2 * sizeof(uint32_t))
 static char buf[VUART_BUFLEN];
 
 typedef struct console_virtio_emul_internal {
@@ -22,8 +26,25 @@ typedef struct console_virtio_emul_internal {
 
 typedef void(*tx_handler_fn_t)(virtio_emul_t *emul, int queue, void *buffer, unsigned int len);
 
-static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, unsigned int len)
+/**
+ * Takes data from the virtio console backend layer, adds them to the virtqueue, and notifies
+ * the guest. This function assumes that the backend layer provides a ringbuffer.
+ *
+ * @see vm/components/Init/src/virtio_con.c or vm/components/VM_Arm/src/modules/virtio_con.c
+ * for invariants of the ringbuffer.
+ *
+ * @param emul virtio device handler
+ * @param queue queue number of the destination virtqueue
+ * @param buf ringbuffer that contains the data to sent to the guest
+ * @param head head of the ringbuffer
+ * @param tail tail of the ringbuffer
+ */
+static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, uint32_t head, uint32_t tail)
 {
+    if (head == tail) {
+        return;
+    }
+
     console_internal_t *con = emul->internal;
     vqueue_t *virtq = &emul->virtq;
     int i;
@@ -33,14 +54,14 @@ static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, unsi
     uint16_t idx = virtq->last_idx[queue];
 
     if (idx != guest_idx) {
-        /* total length of the written packet so far */
-        size_t tot_written = 0;
         /* amount of the current descriptor written */
         size_t desc_written = 0;
         /* how much we have written of the current buffer */
         size_t buf_written = 0;
-        /* the current buffer. -1 indicates the virtio con buffer */
-        int current_buf = 0;
+        /* len of the data that we need to write */
+        size_t len = (tail > head) ? (tail - head) : (tail - head + VUART_BUFLEN);
+        uint32_t current_head = head;
+
         uint16_t desc_head = ring_avail(emul, vring, idx);
         /* start walking the descriptors */
         struct vring_desc desc;
@@ -49,13 +70,14 @@ static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, unsi
             desc = ring_desc(emul, vring, desc_idx);
             /* determine how much we can copy */
             uint32_t copy;
-            copy = len - buf_written;
+            copy = MIN(len - buf_written, VUART_BUFLEN - current_head);
             copy = MIN(copy, desc.len - desc_written);
-            vm_guest_write_mem(emul->vm, buf + buf_written, (uintptr_t)desc.addr + desc_written, copy);
+            vm_guest_write_mem(emul->vm, buf + current_head, (uintptr_t)desc.addr + desc_written, copy);
+
             /* update amounts */
-            tot_written += copy;
             desc_written += copy;
             buf_written += copy;
+            current_head = (current_head + copy) % VUART_BUFLEN;
             /* see what's gone over */
             if (desc_written == desc.len) {
                 if (!desc.flags & VRING_DESC_F_NEXT) {
@@ -66,14 +88,9 @@ static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, unsi
                 desc_idx = desc.next;
                 desc_written = 0;
             }
-            if (buf_written == len) {
-                current_buf++;
-                buf_written = 0;
-            }
-
-        } while (current_buf < 1);
+        } while (buf_written != len);
         /* now put it in the used ring */
-        struct vring_used_elem used_elem = {desc_head, tot_written};
+        struct vring_used_elem used_elem = {desc_head, buf_written};
         ring_used_add(emul, vring, used_elem);
 
         /* record that we've used this descriptor chain now */
@@ -93,14 +110,14 @@ static void emul_con_rx_complete(virtio_emul_t *emul, int queue, char *buf, unsi
  * (4, 5): Port 1 RX and TX
  * (2+2*N, 2+2*N+1): Port N RX and TX
  */
-void virtio_console_putchar(int port, virtio_emul_t *emul, char *buf, int len)
+void virtio_console_putchar(int port, virtio_emul_t *emul, char *buffer, uint32_t head, uint32_t tail)
 {
     /* port -1 is for the control messages, all others as normal */
     int vq_num = 0;
     if (port > 0) {
         vq_num = CTL_RX_QUEUE + 2 * port;
     }
-    emul_con_rx_complete(emul, vq_num, buf, len);
+    emul_con_rx_complete(emul, vq_num, buffer, head, tail);
 }
 
 /* Write to port attached to queue number */
@@ -140,7 +157,7 @@ static void handle_control_message(virtio_emul_t *emul, void *buffer)
                 VIRTIO_CON_PORT_ADD,
                 0
             };
-            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, sizeof(out_msg));
+            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, 0, sizeof(out_msg));
 
             con->con_count++;
         } else {
@@ -154,7 +171,7 @@ static void handle_control_message(virtio_emul_t *emul, void *buffer)
                 1
             };
             con->con_count++;
-            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, sizeof(out_msg));
+            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, 0, sizeof(out_msg));
         }
 
         break;
@@ -168,7 +185,7 @@ static void handle_control_message(virtio_emul_t *emul, void *buffer)
                 1
             };
             con->con_count++;
-            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, sizeof(out_msg));
+            emul_con_rx_complete(emul, CTL_RX_QUEUE, (char *) &out_msg, 0, sizeof(out_msg));
         }
         break;
     default:
