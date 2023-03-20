@@ -82,7 +82,7 @@ static int is_initrd(void *file)
     return hdr->magic != INITRD_GZ_MAGIC;
 }
 
-enum img_type image_get_type(void *file)
+static enum img_type image_get_type(void *file)
 {
     if (elf_check_magic(file) == 0) {
         return IMG_ELF;
@@ -99,7 +99,7 @@ enum img_type image_get_type(void *file)
     }
 }
 
-uintptr_t zImage_get_load_address(void *file, uintptr_t ram_base)
+static uintptr_t zImage_get_load_address(void *file, uintptr_t ram_base)
 {
     struct zimage_hdr *hdr;
     hdr = (struct zimage_hdr *)file;
