@@ -103,12 +103,7 @@ uintptr_t zImage_get_load_address(void *file, uintptr_t ram_base)
 {
     struct zimage_hdr *hdr;
     hdr = (struct zimage_hdr *)file;
-    if (hdr->start == 0) {
-        return ram_base + 0x8000;
-    } else {
-        return hdr->start;
-    }
-    return 0;
+    return (hdr->start != 0) ? hdr->start : (ram_base + 0x8000);
 }
 
 static int get_guest_image_type(const char *image_name, enum img_type *image_type, Elf64_Ehdr *header)
