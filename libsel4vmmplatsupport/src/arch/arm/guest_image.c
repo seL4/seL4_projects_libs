@@ -114,7 +114,6 @@ uintptr_t zImage_get_load_address(void *file, uintptr_t ram_base)
 static int get_guest_image_type(const char *image_name, enum img_type *image_type, Elf64_Ehdr *header)
 {
     int fd;
-    uintptr_t load_addr;
     fd = open(image_name, 0);
     if (fd == -1) {
         ZF_LOGE("Error: Unable to open image \'%s\'", image_name);
