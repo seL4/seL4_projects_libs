@@ -182,8 +182,8 @@ static int load_image(vm_t *vm, const char *image_name, uintptr_t load_addr,  si
     return 0;
 }
 
-static void *load_guest_kernel_image(vm_t *vm, const char *kernel_image_name, uintptr_t load_base_addr,
-                                     size_t *image_size)
+static uintptr_t load_guest_kernel_image(vm_t *vm, const char *kernel_image_name, uintptr_t load_base_addr,
+                                         size_t *image_size)
 {
     int err;
     uintptr_t load_addr;
@@ -191,7 +191,7 @@ static void *load_guest_kernel_image(vm_t *vm, const char *kernel_image_name, ui
     Elf64_Ehdr header = {0};
     err = get_guest_image_type(kernel_image_name, &ret_file_type, &header);
     if (err) {
-        return NULL;
+        return 0;
     }
     /* Determine the load address */
     switch (ret_file_type) {
@@ -203,16 +203,16 @@ static void *load_guest_kernel_image(vm_t *vm, const char *kernel_image_name, ui
         break;
     default:
         ZF_LOGE("Error: Unknown Linux image format for \'%s\'", kernel_image_name);
-        return NULL;
+        return 0;
     }
     err = load_image(vm, kernel_image_name, load_addr, image_size);
     if (err) {
-        return NULL;
+        return 0;
     }
-    return (void *)load_addr;
+    return load_addr;
 }
 
-static void *load_guest_module_image(vm_t *vm, const char *image_name, uintptr_t load_base_addr, size_t *image_size)
+static uintptr_t load_guest_module_image(vm_t *vm, const char *image_name, uintptr_t load_base_addr, size_t *image_size)
 {
     int err;
     uintptr_t load_addr;
@@ -220,7 +220,7 @@ static void *load_guest_module_image(vm_t *vm, const char *image_name, uintptr_t
     Elf64_Ehdr header = {0};
     err = get_guest_image_type(image_name, &ret_file_type, &header);
     if (err) {
-        return NULL;
+        return 0;
     }
     /* Determine the load address */
     switch (ret_file_type) {
@@ -230,29 +230,29 @@ static void *load_guest_module_image(vm_t *vm, const char *image_name, uintptr_t
         break;
     default:
         ZF_LOGE("Error: Unknown Linux image format for \'%s\'", image_name);
-        return NULL;
+        return 0;
     }
     err = load_image(vm, image_name, load_addr, image_size);
     if (err) {
-        return NULL;
+        return 0;
     }
-    return (void *)load_addr;
+    return load_addr;
 }
 
 int vm_load_guest_kernel(vm_t *vm, const char *kernel_name, uintptr_t load_address, size_t alignment,
                          guest_kernel_image_t *guest_kernel_image)
 {
-    void *load_addr;
+    uintptr_t load_addr;
     size_t kernel_len;
     if (!guest_kernel_image) {
         ZF_LOGE("Invalid guest_image_t object");
         return -1;
     }
     load_addr = load_guest_kernel_image(vm, kernel_name, load_address, &kernel_len);
-    if (!load_addr) {
+    if (0 == load_addr) {
         return -1;
     }
-    guest_kernel_image->kernel_image.load_paddr = (uintptr_t)load_addr;
+    guest_kernel_image->kernel_image.load_paddr = load_addr;
     guest_kernel_image->kernel_image.size = kernel_len;
     return 0;
 }
@@ -260,7 +260,7 @@ int vm_load_guest_kernel(vm_t *vm, const char *kernel_name, uintptr_t load_addre
 int vm_load_guest_module(vm_t *vm, const char *module_name, uintptr_t load_address, size_t alignment,
                          guest_image_t *guest_image)
 {
-    void *load_addr;
+    uintptr_t load_addr;
     size_t module_len;
 
     if (!guest_image) {
@@ -269,11 +269,11 @@ int vm_load_guest_module(vm_t *vm, const char *module_name, uintptr_t load_addre
     }
 
     load_addr = load_guest_module_image(vm, module_name, load_address, &module_len);
-    if (!load_addr) {
+    if (0 == load_addr) {
         return -1;
     }
 
-    guest_image->load_paddr = (uintptr_t)load_addr;
+    guest_image->load_paddr = load_addr;
     guest_image->size = module_len;
     return 0;
 }
