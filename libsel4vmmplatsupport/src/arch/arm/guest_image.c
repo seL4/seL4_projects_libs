@@ -192,9 +192,10 @@ static uintptr_t load_guest_kernel_image(vm_t *vm, const char *kernel_image_name
         load_addr = vm->entry;
         break;
     case IMG_ZIMAGE:
+        /* zImage is used for 32-bit Linux kernels only. */
         load_addr = ((struct zimage_hdr *)(&header))->start;
         if (0 == load_addr) {
-            load_addr = load_base_addr + 0x8000;
+            load_addr = vm->entry;
         }
         break;
     default:
