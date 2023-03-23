@@ -73,6 +73,8 @@ typedef struct vgic_vcpu {
 
 /* GIC global interrupt context */
 typedef struct vgic {
+    vm_mapping_t mapped_cpu_if;
+    vm_mapping_t mapped_dist;
     /* virtual distributor registers */
     struct gic_dist_map *dist;
     /* registered global interrupts (SPI) */
@@ -206,10 +208,16 @@ static inline int vgic_vcpu_load_list_reg(vgic_t *vgic, vm_vcpu_t *vcpu, int idx
     assert(vgic_vcpu);
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
 
-    int err = seL4_ARM_VCPU_InjectIRQ(vcpu->vcpu.cptr, irq->virq, 0, group, idx);
-    if (err) {
-        ZF_LOGF("Failure loading vGIC list register (error %d)", err);
-        return err;
+    assert(group == (seL4_Uint8)group);
+    assert(idx = (seL4_Uint8)idx);
+    seL4_Error err = seL4_ARM_VCPU_InjectIRQ(vcpu->vcpu.cptr, irq->virq, 0,
+                                             (seL4_Uint8)group,
+                                             (seL4_Uint8)idx);
+    if (seL4_NoError != err) {
+        ZF_LOGE("Failure loading vGIC list register %d on vCPU %d, sel4 error %d",
+                idx, vcpu->vcpu_id, err);
+        /* Return a generic error, the caller doesn't understand seL4 errors. */
+        return -1;
     }
 
     vgic_vcpu->lr_shadow[idx] = irq;
