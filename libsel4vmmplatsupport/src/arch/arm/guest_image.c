@@ -202,7 +202,7 @@ static uintptr_t load_guest_kernel_image(vm_t *vm, const char *kernel_image_name
         load_addr = zImage_get_load_address(&header, load_base_addr);
         break;
     default:
-        ZF_LOGE("Error: Unknown kernel image format for \'%s\'", kernel_image_name);
+        ZF_LOGE("Error: Unknown kernel image format for '%s'", kernel_image_name);
         return 0;
     }
     err = load_image(vm, kernel_image_name, load_addr, image_size);
@@ -229,7 +229,7 @@ static uintptr_t load_guest_module_image(vm_t *vm, const char *image_name, uintp
         load_addr = load_base_addr;
         break;
     default:
-        ZF_LOGE("Error: Unknown module image format for \'%s\'", image_name);
+        ZF_LOGE("Error: Unknown module image format for '%s'", image_name);
         return 0;
     }
     err = load_image(vm, image_name, load_addr, image_size);
