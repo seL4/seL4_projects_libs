@@ -91,7 +91,7 @@ static int make_guest_pd_continued(void *access_addr, void *vaddr, void *cookie)
     /* Brute force 1:1 entries. */
     for (int i = 0; i < num_entries; i++) {
         /* Present, write, user, page size 2M */
-        pd[i] = (uint64_t)((uint64_t)((i) << PAGE_BITS_2M) | PAGE_ENTRY);
+        pd[i] = ((uint64_t)i) << PAGE_BITS_2M | PAGE_ENTRY;
     }
 
     return 0;
@@ -260,12 +260,12 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     vm_guest_state_initialise(vcpu->vcpu_arch.guest_state);
     /* Set the initial CR state */
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_mask = VM_VMCS_CR0_MASK;
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     /* In 64-bit mode, PG and PE always need to be enabled, otherwise a fault will occur. */
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_shadow = VM_VMCS_CR0_MASK;
 #else
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_shadow = 0;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     vcpu->vcpu_arch.guest_state->virt.cr.cr0_host_bits = VM_VMCS_CR0_VALUE;
     vcpu->vcpu_arch.guest_state->virt.cr.cr4_mask = VM_VMCS_CR4_MASK;
     vcpu->vcpu_arch.guest_state->virt.cr.cr4_shadow = 0;

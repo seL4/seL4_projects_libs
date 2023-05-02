@@ -19,11 +19,11 @@
 #include <sel4vm/guest_memory.h>
 #include <sel4vm/guest_ram.h>
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 #define ELF_HEADER_SIZE 512
 #else
 #define ELF_HEADER_SIZE 256
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 #define ISELF32(elfFile) ( ((Elf32_Ehdr *)elfFile)->e_ident[EI_CLASS] == ELFCLASS32 )
 #define ISELF64(elfFile) ( ((Elf64_Ehdr *)elfFile)->e_ident[EI_CLASS] == ELFCLASS64 )
@@ -49,7 +49,7 @@ static int read_elf_headers(void *buf, vm_t *vm, FILE *file, size_t buf_size, el
     }
 
     /* Check for correct ELF version on the current architecture */
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     if (ISELF32(buf)) {
         return -1;
     }
@@ -57,7 +57,7 @@ static int read_elf_headers(void *buf, vm_t *vm, FILE *file, size_t buf_size, el
     if (ISELF64(buf)) {
         return -1;
     }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     return elf_newFile_maybe_unsafe(buf, buf_size, true, false, elf);
 }

@@ -32,9 +32,11 @@ void print_ept_violation(vm_vcpu_t *vcpu)
     vm_vmcs_read(vcpu->vcpu.cptr, VMX_DATA_GUEST_LINEAR_ADDRESS, &linear_address);
     printf(COLOUR_R "!!!!!!!! ALERT :: GUEST OS PAGE FAULT !!!!!!!!\n");
     printf("    Guest OS VMExit due to EPT Violation:\n");
-    printf("        Linear address 0x%lx.\n", linear_address);
-    printf("        Guest-Physical address 0x%lx.\n", (seL4_Word) vm_guest_exit_get_physical(vcpu->vcpu_arch.guest_state));
-    printf("        Instruction pointer 0x%lx.\n", (seL4_Word) vm_guest_state_get_eip(vcpu->vcpu_arch.guest_state));
+    printf("        Linear address 0x"SEL4_PRIx_word".\n", linear_address);
+    printf("        Guest-Physical address 0x"SEL4_PRIx_word".\n",
+           (seL4_Word) vm_guest_exit_get_physical(vcpu->vcpu_arch.guest_state));
+    printf("        Instruction pointer 0x"SEL4_PRIx_word".\n",
+           (seL4_Word) vm_guest_state_get_eip(vcpu->vcpu_arch.guest_state));
     printf("    This is most likely due to a bug or misconfiguration.\n" COLOUR_RESET);
 }
 

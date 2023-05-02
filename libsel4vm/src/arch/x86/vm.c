@@ -123,7 +123,7 @@ static void vm_update_guest_state_from_fault(volatile vm_vcpu_t *vcpu, volatile 
     context.esi = msg[SEL4_VMENTER_FAULT_ESI];
     context.edi = msg[SEL4_VMENTER_FAULT_EDI];
     context.ebp = msg[SEL4_VMENTER_FAULT_EBP];
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     context.r8 = msg[SEL4_VMENTER_FAULT_R8];
     context.r9 = msg[SEL4_VMENTER_FAULT_R9];
     context.r10 = msg[SEL4_VMENTER_FAULT_R10];
@@ -132,7 +132,7 @@ static void vm_update_guest_state_from_fault(volatile vm_vcpu_t *vcpu, volatile 
     context.r13 = msg[SEL4_VMENTER_FAULT_R13];
     context.r14 = msg[SEL4_VMENTER_FAULT_R14];
     context.r15 = msg[SEL4_VMENTER_FAULT_R15];
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     MACHINE_STATE_READ(vcpu->vcpu_arch.guest_state->machine.context, context);
 }
 
@@ -147,14 +147,14 @@ int vm_run_arch(vm_t *vm)
     int ret;
     vm_vcpu_t *vcpu = vm->vcpus[BOOT_VCPU];
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     /* On Linux Kernels below 4.7, startup_64 does not setup a stack before
      * calling verify_cpu, which causes a triple fault. This sets an initial
      * stack in low memory. For Linux kernels > 4.7, this will simply get
      * overwritten
      */
     vm_guest_state_set_esp(vcpu->vcpu_arch.guest_state, VMM_INITIAL_STACK);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     vcpu->vcpu_arch.guest_state->virt.interrupt_halt = 0;
     vcpu->vcpu_arch.guest_state->exit.in_exit = 0;

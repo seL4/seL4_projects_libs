@@ -75,14 +75,14 @@ typedef struct guest_machine_state {
     MACHINE_STATE(seL4_Word, gdt_base);
     MACHINE_STATE(seL4_Word, gdt_limit);
     MACHINE_STATE(seL4_Word, cs_selector);
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     MACHINE_STATE(seL4_Word, ss_selector);
     MACHINE_STATE(seL4_Word, ds_selector);
     MACHINE_STATE(seL4_Word, es_selector);
     MACHINE_STATE(seL4_Word, fs_selector);
     MACHINE_STATE(seL4_Word, gs_selector);
     MACHINE_STATE(seL4_Word, esp);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     MACHINE_STATE(seL4_Word, entry_exception_error_code);
     /* This is state that we set on VMentry and get back on
      * a vmexit, therefore it is always valid and correct */
@@ -145,14 +145,14 @@ static inline bool vm_guest_state_no_modified(guest_state_t *gs)
                IS_MACHINE_STATE_MODIFIED(gs->machine.gdt_base) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.gdt_limit) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.cs_selector) ||
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
                IS_MACHINE_STATE_MODIFIED(gs->machine.ss_selector) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.ds_selector) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.es_selector) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.fs_selector) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.gs_selector) ||
                IS_MACHINE_STATE_MODIFIED(gs->machine.esp) ||
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
                IS_MACHINE_STATE_MODIFIED(gs->machine.entry_exception_error_code)
            );
 }
@@ -171,14 +171,14 @@ static inline void vm_guest_state_initialise(guest_state_t *gs)
     MACHINE_STATE_INIT(gs->machine.gdt_base);
     MACHINE_STATE_INIT(gs->machine.gdt_limit);
     MACHINE_STATE_INIT(gs->machine.cs_selector);
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     MACHINE_STATE_INIT(gs->machine.ss_selector);
     MACHINE_STATE_INIT(gs->machine.ds_selector);
     MACHINE_STATE_INIT(gs->machine.es_selector);
     MACHINE_STATE_INIT(gs->machine.fs_selector);
     MACHINE_STATE_INIT(gs->machine.gs_selector);
     MACHINE_STATE_INIT(gs->machine.esp);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     MACHINE_STATE_INIT(gs->machine.entry_exception_error_code);
 }
 
@@ -195,14 +195,14 @@ static inline void vm_guest_state_invalidate_all(guest_state_t *gs)
     MACHINE_STATE_INVAL(gs->machine.gdt_base);
     MACHINE_STATE_INVAL(gs->machine.gdt_limit);
     MACHINE_STATE_INVAL(gs->machine.cs_selector);
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     MACHINE_STATE_INVAL(gs->machine.ss_selector);
     MACHINE_STATE_INVAL(gs->machine.ds_selector);
     MACHINE_STATE_INVAL(gs->machine.es_selector);
     MACHINE_STATE_INVAL(gs->machine.fs_selector);
     MACHINE_STATE_INVAL(gs->machine.gs_selector);
     MACHINE_STATE_INVAL(gs->machine.esp);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     MACHINE_STATE_INVAL(gs->machine.entry_exception_error_code);
 }
 
@@ -342,7 +342,7 @@ static inline seL4_Word vm_guest_state_get_cs_selector(guest_state_t *gs, seL4_C
     return gs->machine.cs_selector;
 }
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 static inline seL4_Word vm_guest_state_get_ss_selector(guest_state_t *gs, seL4_CPtr vcpu)
 {
     int err;
@@ -414,7 +414,7 @@ static inline seL4_Word vm_guest_state_get_esp(guest_state_t *gs, seL4_CPtr vcpu
     }
     return gs->machine.esp;
 }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 /* set */
 static inline void vm_guest_state_set_eip(guest_state_t *gs, seL4_Word val)
@@ -486,7 +486,7 @@ static inline void vm_guest_state_set_cs_selector(guest_state_t *gs, seL4_Word v
     gs->machine.cs_selector = val;
 }
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 static inline void vm_guest_state_set_ss_selector(guest_state_t *gs, seL4_Word val)
 {
     MACHINE_STATE_DIRTY(gs->machine.ss_selector);
@@ -522,7 +522,7 @@ static inline void vm_guest_state_set_esp(guest_state_t *gs, seL4_Word val)
     MACHINE_STATE_DIRTY(gs->machine.esp);
     gs->machine.esp = val;
 }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 static inline void vm_guest_state_set_entry_exception_error_code(guest_state_t *gs, seL4_Word val)
 {
@@ -612,7 +612,7 @@ static inline void vm_guest_state_sync_cs_selector(guest_state_t *gs, seL4_CPtr 
     }
 }
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 static inline void vm_guest_state_sync_ss_selector(guest_state_t *gs, seL4_CPtr vcpu)
 {
     if (IS_MACHINE_STATE_MODIFIED(gs->machine.ss_selector)) {
@@ -666,7 +666,7 @@ static inline void vm_guest_state_sync_esp(guest_state_t *gs, seL4_CPtr vcpu)
         MACHINE_STATE_SYNC(gs->machine.esp);
     }
 }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 static inline void vm_guest_state_sync_entry_exception_error_code(guest_state_t *gs, seL4_CPtr vcpu)
 {
@@ -688,14 +688,14 @@ static inline void vm_sync_guest_vmcs_state(vm_vcpu_t *vcpu)
     vm_guest_state_sync_gdt_base(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_gdt_limit(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_cs_selector(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     vm_guest_state_sync_ss_selector(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_ds_selector(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_es_selector(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_fs_selector(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_gs_selector(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
     vm_guest_state_sync_esp(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     vm_guest_state_sync_entry_exception_error_code(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
 }
 

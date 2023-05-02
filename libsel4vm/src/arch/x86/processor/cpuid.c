@@ -49,13 +49,13 @@ static int vm_cpuid_virt(unsigned int function, unsigned int index, struct cpuid
 
     /* cpuid 1.edx */
     const unsigned int kvm_supported_word0_x86_features =
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
         F(FPU) | 0 /*F(VME)*/ | 0 /*F(DE)*/ | F(PSE) |
         F(TSC) | F(MSR) | F(PAE) | 0/*F(MCE)*/ |
 #else
         F(FPU) | 0 /*F(VME)*/ | 0 /*F(DE)*/ | 0/*F(PSE)*/ |
         F(TSC) | 0/*F(MSR)*/ | 0 /*F(PAE)*/ | 0/*F(MCE)*/ |
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
         0 /*F(CX8)*/ | F(APIC) | 0 /* Reserved */ | F(SEP) |
         /*F(MTRR)*/ 0 | F(PGE) | 0/*F(MCA)*/ | F(CMOV) |
         0 /*F(PAT)*/ | 0 /* F(PSE36)*/ | 0 /* PSN */ | 0/*F(CLFLSH)*/ |
@@ -76,19 +76,19 @@ static int vm_cpuid_virt(unsigned int function, unsigned int index, struct cpuid
 
     /* cpuid 0x80000001.edx */
     const unsigned int kvm_supported_word1_x86_features =
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
         0 /*F(NX)*/ | F(LM) | F(GBPAGES) | F(SYSCALL) | 0/*F(RDTSCP)*/;  /*support x86 64*/
 #else
         0 /*F(NX)*/ | 0/*F(RDTSCP)*/;  /*do not support x86 64*/
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     /* cpuid 0x80000001.ecx */
     const unsigned int kvm_supported_word6_x86_features =
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
         F(LAHF_LM);
 #else
         0;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 #if 0
     /* cpuid 0xC0000001.edx */

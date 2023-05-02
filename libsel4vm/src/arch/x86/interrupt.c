@@ -140,7 +140,7 @@ void vm_start_ap_vcpu(vm_vcpu_t *vcpu, unsigned int sipi_vector)
     eip = vm_emulate_realmode(vcpu, instr, &segment, eip,
                               TRAMPOLINE_LENGTH, gs, 0);
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     /* 64-bit guests go from realmode to 32-bit emulation mode to longmode */
     memset(instr, 0, TRAMPOLINE_LENGTH);
 
@@ -149,7 +149,7 @@ void vm_start_ap_vcpu(vm_vcpu_t *vcpu, unsigned int sipi_vector)
 
     eip = vm_emulate_realmode(vcpu, instr, &segment, eip,
                               TRAMPOLINE_LENGTH, gs, 1);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     vm_guest_state_set_eip(vcpu->vcpu_arch.guest_state, eip);
 

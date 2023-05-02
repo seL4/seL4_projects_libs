@@ -15,13 +15,13 @@
 #include "guest_state.h"
 #include "vmcs.h"
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 #define CS_ACCESS_RIGHTS AR(G) | AR(L) | AR(P) | AR(S) | AR_T(BUSY_TSS)
 #define LDTR_ACCESS_RIGHTS AR(P) | AR_T(LDT)
 #else
 #define CS_ACCESS_RIGHTS AR(G) | AR(DB) | AR(P) | AR(S) | AR_T(BUSY_TSS)
 #define LDTR_ACCESS_RIGHTS ACCESS_RIGHTS_UNUSABLE
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 /*init the vmcs structure for a 32-bit guest os thread*/
 static void vm_vmcs_init_32_bit_guest(vm_vcpu_t *vcpu)
@@ -98,11 +98,11 @@ void vm_vmcs_init_guest(vm_vcpu_t *vcpu)
     vm_vmcs_write(vcpu->vcpu.cptr, VMX_GUEST_SYSENTER_ESP, 0);
     vm_vmcs_write(vcpu->vcpu.cptr, VMX_GUEST_SYSENTER_EIP, 0);
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     vm_vmcs_init_64_bit_guest(vcpu);
 #else
     vm_vmcs_init_32_bit_guest(vcpu);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     vm_vmcs_write(vcpu->vcpu.cptr, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS,
                   vcpu->vcpu_arch.guest_state->machine.control_ppc);

@@ -153,12 +153,12 @@ int vm_fetch_instruction(vm_vcpu_t *vcpu, uintptr_t eip, uintptr_t cr3,
     uintptr_t cr4 = vm_guest_state_get_cr4(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr);
 
     /* ensure that PAE is not enabled */
-#ifndef CONFIG_ARCH_X86_64
+#ifndef CONFIG_X86_64_VTX_64BIT_GUESTS
     if (cr4 & X86_CR4_PAE) {
         ZF_LOGE("Do not support walking PAE paging structures");
         return -1;
     }
-#endif
+#endif /* not CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     int extra_instr = 0;
     int read_instr = len;
@@ -255,9 +255,9 @@ static int is_prefix(uint8_t byte)
     case CS_SEG_OVERRIDE:
     case SS_SEG_OVERRIDE:
     case DS_SEG_OVERRIDE:
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     case REX_PREFIX_START ... REX_PREFIX_END:
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     case FS_SEG_OVERRIDE:
     case GS_SEG_OVERRIDE:
     case ADDR_SIZE_OVERRIDE:
@@ -426,7 +426,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                     //ignore
                     instr++;
                 }
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
             } else if (*instr == 0x22) {
                 // mov eax crX
                 instr++;
@@ -459,7 +459,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                     vm_set_vmcs_field(vcpu, VMX_GUEST_EFER, (edx << 32) | eax);
                     ZF_LOGD("wrmsr %lx %lx\n", ecx, (edx << 32) | eax);
                 }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
             } else {
                 //ignore
                 instr++;
@@ -506,14 +506,14 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 memcpy(&mem, instr, 2);
                 instr += 2;
                 mem += *segment * SEG_MULT;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
                 ZF_LOGD("mov %p, eax\n", (void *)mem);
                 uint32_t eax;
                 vm_ram_touch(vcpu->vm, mem,
                              4, vm_guest_ram_read_callback, &eax);
                 vm_set_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, eax);
                 break;
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
             case 0xb8:
                 /* mov const to eax */
                 instr++;
@@ -557,7 +557,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                     ZF_LOGD("add %lx, rsp\n", mem);
                 }
                 break;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
             case 0xc7:
                 instr++;
                 if (*instr == 0x06) { // modrm
@@ -581,7 +581,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 }
                 break;
             case 0xba:
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
                 /* mov const to edx */
                 instr++;
                 memcpy(&mem, instr, 4);
@@ -592,24 +592,24 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 //?????mov literal to dx
                 /* ignore */
                 instr += 2;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
                 break;
             case 0xbc:
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
                 // mov lit esp
                 instr++;
                 memcpy(&mem, instr, 4);
                 instr += 4;
                 ZF_LOGD(4, "mov %lx, esp\n", mem);
                 vm_guest_state_set_esp(gs, mem);
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
                 break;
             case 0x8c:
                 /* mov to/from sreg. ignore */
                 instr += 2;
                 break;
             case 0x8e:
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
                 // mov eax/edx -> segment register
                 instr++;
 
@@ -646,9 +646,9 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
 #else
                 /* mov to/from sreg. ignore */
                 instr += 2;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
                 break;
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
             case 0x75:
             /* jne */
             case 0x85:
@@ -659,7 +659,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 /* call rel */
                 instr += 3;
                 break;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
             default:
                 /* Assume this is a single byte instruction we can ignore */
                 instr++;

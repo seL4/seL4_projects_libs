@@ -150,7 +150,7 @@ static int crExitRegs[] = {
     VCPU_CONTEXT_EBP,
     VCPU_CONTEXT_ESI,
     VCPU_CONTEXT_EDI,
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     VCPU_CONTEXT_R8,
     VCPU_CONTEXT_R9,
     VCPU_CONTEXT_R10,
@@ -159,7 +159,7 @@ static int crExitRegs[] = {
     VCPU_CONTEXT_R13,
     VCPU_CONTEXT_R14,
     VCPU_CONTEXT_R15,
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 };
 
 int vm_cr_access_handler(vm_vcpu_t *vcpu)

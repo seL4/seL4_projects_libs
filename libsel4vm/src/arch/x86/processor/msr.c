@@ -20,7 +20,7 @@
 #include "processor/lapic.h"
 #include "interrupt.h"
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 static seL4_Word vm_msr_read(seL4_CPtr vcpu, unsigned int field)
 {
 
@@ -42,9 +42,9 @@ static void vm_msr_write(seL4_CPtr vcpu, unsigned int field, seL4_Word value)
     assert(vcpu);
 
     result = seL4_X86_VCPU_WriteMSR(vcpu, (seL4_Word)field, value);
-    assert(result.error == seL4_NoError);
+    ZF_LOGF_IF(result.error != seL4_NoError, "MSR writing failed, error number: %d", result.error);
 }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 int vm_rdmsr_handler(vm_vcpu_t *vcpu)
 {
@@ -57,7 +57,7 @@ int vm_rdmsr_handler(vm_vcpu_t *vcpu)
     uint64_t data = 0;
     seL4_Word vm_data;
 
-    ZF_LOGD("rdmsr ecx 0x%lx\n", msr_no);
+    ZF_LOGD("rdmsr ecx 0x"SEL4_PRIx_word"\n", msr_no);
 
     // src reference: Linux kernel 3.11 kvm arch/x86/kvm/x86.c
     switch (msr_no) {
@@ -97,7 +97,7 @@ int vm_rdmsr_handler(vm_vcpu_t *vcpu)
         data = vm_lapic_get_base_msr(vcpu);
         break;
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     case MSR_EFER:
         vm_get_vmcs_field(vcpu, VMX_GUEST_EFER, &vm_data);
         data = (uint64_t) vm_data;
@@ -110,7 +110,7 @@ int vm_rdmsr_handler(vm_vcpu_t *vcpu)
         vm_data = vm_msr_read(vcpu->vcpu.cptr, msr_no);
         data = (uint64_t) vm_data;
         break;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     default:
         ZF_LOGW("rdmsr WARNING unsupported msr_no 0x%x\n", msr_no);
@@ -166,7 +166,7 @@ int vm_wrmsr_handler(vm_vcpu_t *vcpu)
         vm_lapic_set_base_msr(vcpu, val_low);
         break;
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     case MSR_EFER:
         vm_set_vmcs_field(vcpu, VMX_GUEST_EFER, val_low);
         break;
@@ -177,7 +177,7 @@ int vm_wrmsr_handler(vm_vcpu_t *vcpu)
     case MSR_SYSCALL_MASK:
         vm_msr_write(vcpu->vcpu.cptr, msr_no, (seL4_Word)(((seL4_Word)val_high << 32ull) | val_low));
         break;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 
     default:
         ZF_LOGW("wrmsr WARNING unsupported msr_no 0x%x\n", msr_no);

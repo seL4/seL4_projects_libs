@@ -21,7 +21,7 @@
 #include "guest_state.h"
 #include "vmcs.h"
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 
 void vm_print_guest_context(vm_vcpu_t *vcpu)
 {
@@ -33,53 +33,54 @@ void vm_print_guest_context(vm_vcpu_t *vcpu)
 
     printf("================== GUEST OS CONTEXT =================\n");
 
-    printf("exit info : reason 0x%lx    qualification 0x%lx   instruction len 0x%lx interrupt info 0x%lx interrupt error 0x%lx\n",
+    printf("exit info : reason 0x"SEL4_PRIx_word"    qualification 0x"SEL4_PRIx_word"   "
+           "instruction len 0x"SEL4_PRIx_word" interrupt info 0x"SEL4_PRIx_word" interrupt error 0x"SEL4_PRIx_word"\n",
            vm_guest_exit_get_reason(vcpu->vcpu_arch.guest_state),
            vm_guest_exit_get_qualification(vcpu->vcpu_arch.guest_state),
            vm_guest_exit_get_int_len(vcpu->vcpu_arch.guest_state), data_exit_info, data_exit_error);
-    printf("            guest physical 0x%lx     rflags 0x%lx\n",
+    printf("            guest physical 0x"SEL4_PRIx_word"     rflags 0x"SEL4_PRIx_word"\n",
            vm_guest_exit_get_physical(vcpu->vcpu_arch.guest_state),
            vm_guest_state_get_rflags(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr));
-    printf("            guest interruptibility 0x%lx   control entry 0x%lx\n",
+    printf("            guest interruptibility 0x"SEL4_PRIx_word"   control entry 0x"SEL4_PRIx_word"\n",
            vm_guest_state_get_interruptibility(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr),
            vm_guest_state_get_control_entry(vcpu->vcpu_arch.guest_state));
 
-    printf("rip 0x%lx\n",
+    printf("rip 0x"SEL4_PRIx_word"\n",
            vm_guest_state_get_eip(vcpu->vcpu_arch.guest_state));
     seL4_Word rax, rbx, rcx;
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, &rax);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EBX, &rbx);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_ECX, &rcx);
-    printf("rax 0x%lx         rbx 0x%lx      rcx 0x%lx\n", rax, rbx, rcx);
+    printf("rax 0x"SEL4_PRIx_word"         rbx 0x"SEL4_PRIx_word"      rcx 0x"SEL4_PRIx_word"\n", rax, rbx, rcx);
     seL4_Word rdx, rsi, rdi;
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EDX, &rdx);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_ESI, &rsi);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EDI, &rdi);
-    printf("rdx 0x%lx         rsi 0x%lx      rdi 0x%lx\n", rdx, rsi, rdi);
+    printf("rdx 0x"SEL4_PRIx_word"         rsi 0x"SEL4_PRIx_word"      rdi 0x"SEL4_PRIx_word"\n", rdx, rsi, rdi);
     seL4_Word rbp;
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EBP, &rbp);
-    printf("rbp 0x%lx\n", rbp);
+    printf("rbp 0x"SEL4_PRIx_word"\n", rbp);
     seL4_Word r8, r9, r10;
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R8, &r8);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R9, &r9);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R10, &r10);
-    printf("r8 0x%lx          r9 0x%lx       r10 0x%lx\n", r8, r9, r10);
+    printf("r8 0x"SEL4_PRIx_word"          r9 0x"SEL4_PRIx_word"       r10 0x"SEL4_PRIx_word"\n", r8, r9, r10);
     seL4_Word r11, r12, r13;
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R11, &r11);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R12, &r12);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R13, &r13);
-    printf("r11 0x%lx         r12 0x%lx      r13 0x%lx\n", r11, r12, r13);
+    printf("r11 0x"SEL4_PRIx_word"         r12 0x"SEL4_PRIx_word"      r13 0x"SEL4_PRIx_word"\n", r11, r12, r13);
     seL4_Word r14, r15;
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R14, &r14);
     vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_R15, &r15);
-    printf("r14 0x%lx         r15 0x%lx\n", r14, r15);
-    printf("cr0 0x%lx      cr3 0x%lx   cr4 0x%lx\n",
+    printf("r14 0x"SEL4_PRIx_word"         r15 0x"SEL4_PRIx_word"\n", r14, r15);
+    printf("cr0 0x"SEL4_PRIx_word"      cr3 0x"SEL4_PRIx_word"   cr4 0x"SEL4_PRIx_word"\n",
            vm_guest_state_get_cr0(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr),
            vm_guest_state_get_cr3(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr),
            vm_guest_state_get_cr4(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr));
 }
 
-#else
+#else /* not CONFIG_X86_64_VTX_64BIT_GUESTS */
 
 /* Print out the context of a guest OS thread. */
 void vm_print_guest_context(vm_vcpu_t *vcpu)
@@ -122,4 +123,4 @@ void vm_print_guest_context(vm_vcpu_t *vcpu)
            vm_guest_state_get_cr4(vcpu->vcpu_arch.guest_state, vcpu->vcpu.cptr));
 }
 
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
