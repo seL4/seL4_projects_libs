@@ -263,12 +263,10 @@ int make_guest_acpi_tables(vm_t *vm)
     acpi_fill_table_head(&xsdt->header, "XSDT", 1);
 
     // Add previous tables to XSDT pointer list
-    uintptr_t table_paddr = xsdt_addr + xsdt_size;
     uintptr_t table_vaddr = xsdt_vaddr + xsdt_size;
     uint64_t *entry = (uint64_t *)((char *)xsdt + sizeof(acpi_xsdt_t));
     for (int i = 1; i < num_tables; i++) {
         *entry++ = (uint64_t)table_vaddr;
-        table_paddr += table_sizes[i];
         table_vaddr += table_sizes[i];
     }
 
@@ -279,7 +277,7 @@ int make_guest_acpi_tables(vm_t *vm)
     table_sizes[0] = xsdt_size;
 
     // Copy all the tables to guest
-    table_paddr = xsdt_addr;
+    uintptr_t table_paddr = xsdt_addr;
     table_vaddr = xsdt_vaddr;
     for (int i = 0; i < num_tables; i++) {
 
