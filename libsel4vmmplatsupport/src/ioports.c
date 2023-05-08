@@ -49,9 +49,6 @@ static const char *vmm_debug_io_portno_desc(vmm_io_port_list_t *io_port, int por
 /* IO execution handler. */
 int emulate_io_handler(vmm_io_port_list_t *io_port, unsigned int port_no, bool is_in, size_t size, unsigned int *data)
 {
-
-    unsigned int value;
-
     if (io_port == NULL) {
         ZF_LOGE("Unable to emulate port - io port list is uninitalised");
         return -1;
