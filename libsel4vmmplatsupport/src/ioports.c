@@ -57,14 +57,14 @@ int emulate_io_handler(vmm_io_port_list_t *io_port, unsigned int port_no, bool i
         return -1;
     }
 
-    ZF_LOGI("exit io request: in %d  port no 0x%x (%s) size %d\n",
+    ZF_LOGI("exit io request: in %d  port no 0x%x (%s) size %d",
             is_in, port_no, vmm_debug_io_portno_desc(io_port, port_no), size);
 
     ioport_entry_t **res_port = search_port(io_port, port_no);
     if (!res_port) {
         static int last_port = -1;
         if (last_port != port_no) {
-            ZF_LOGW("exit io request: WARNING - ignoring unsupported ioport 0x%x (%s)\n", port_no,
+            ZF_LOGW("exit io request: WARNING - ignoring unsupported ioport 0x%x (%s)", port_no,
                     vmm_debug_io_portno_desc(io_port, port_no));
             last_port = port_no;
         }
