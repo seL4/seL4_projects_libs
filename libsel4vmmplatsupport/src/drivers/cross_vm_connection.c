@@ -41,13 +41,6 @@ struct connection_info {
     int connection_irq;
 };
 
-struct dataport_iterator_cookie {
-    seL4_CPtr *dataport_frames;
-    uintptr_t dataport_start;
-    size_t dataport_size;
-    vm_t *vm;
-};
-
 static struct connection_info info[MAX_NUM_CONNECTIONS];
 static int total_connections;
 
@@ -151,36 +144,9 @@ static int reserve_event_bar(vm_t *vm, uintptr_t event_bar_address, struct conne
     return 0;
 }
 
-static vm_frame_t dataport_memory_iterator(uintptr_t addr, void *cookie)
-{
-    int error;
-    cspacepath_t return_frame;
-    vm_frame_t frame_result = { seL4_CapNull, seL4_NoRights, 0, 0 };
-    struct dataport_iterator_cookie *dataport_cookie = (struct dataport_iterator_cookie *)cookie;
-    seL4_CPtr *dataport_frames = dataport_cookie->dataport_frames;
-    vm_t *vm = dataport_cookie->vm;
-    uintptr_t dataport_start = dataport_cookie->dataport_start;
-    size_t dataport_size = dataport_cookie->dataport_size;
-    int page_size = seL4_PageBits;
-
-    uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
-    if (frame_start <  dataport_start ||
-        frame_start > dataport_start + dataport_size) {
-        ZF_LOGE("Error: Not Dataport region");
-        return frame_result;
-    }
-    int page_idx = (frame_start - dataport_start) / BIT(page_size);
-    frame_result.cptr = dataport_frames[page_idx];
-    frame_result.rights = seL4_AllRights;
-    frame_result.vaddr = frame_start;
-    frame_result.size_bits = page_size;
-    return frame_result;
-}
-
 static int reserve_dataport_memory(vm_t *vm, crossvm_dataport_handle_t *dataport, uintptr_t dataport_address,
                                    struct connection_info *info)
 {
-    int err;
     size_t size = dataport->size;
     unsigned int num_frames = dataport->num_frames;
     seL4_CPtr *frames = dataport->frames;
@@ -194,16 +160,9 @@ static int reserve_dataport_memory(vm_t *vm, crossvm_dataport_handle_t *dataport
         return -1;
     }
 
-    struct dataport_iterator_cookie *dataport_cookie = malloc(sizeof(struct dataport_iterator_cookie));
-    if (!dataport_cookie) {
-        ZF_LOGE("Failed to allocate dataport iterator cookie");
-        return -1;
-    }
-    dataport_cookie->vm = vm;
-    dataport_cookie->dataport_frames = frames;
-    dataport_cookie->dataport_start = dataport_address;
-    dataport_cookie->dataport_size = size;
-    err = vm_map_reservation(vm, dataport_reservation, dataport_memory_iterator, (void *)dataport_cookie);
+    int err = vm_map_reservation_frames(vm, dataport_reservation, frames,
+                                        num_frames,
+                                        BYTES_TO_SIZE_BITS(size / num_frames));
     if (err) {
         ZF_LOGE("Failed to map dataport memory");
         return -1;
