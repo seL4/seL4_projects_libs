@@ -26,6 +26,8 @@ The user can then further back the reservation with seL4 frames by performing `v
 
 > [`vm_map_reservation(vm, reservation, map_iterator, cookie)`](#function-vm_map_reservationvm-reservation-map_iterator-cookie)
 
+> [`vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`](#function-vm_map_reservationvm-reservation-frames-num_frames-frame_size_bits)
+
 > [`vm_get_reservation_memory_region(reservation, addr, size)`](#function-vm_get_reservation_memory_regionreservation-addr-size)
 
 > [`vm_memory_init(vm)`](#function-vm_memory_initvm)
@@ -104,6 +106,24 @@ Map a reservation into the VM's virtual address space
 - `reservation {vm_memory_reservation_t *}`: Pointer to reservation object being mapped
 - `map_iterator {memory_map_iterator_fn}`: Iterator function that returns a cap to the memory region being mapped
 - `cookie {void *}`: Cookie to pass onto map_iterator function
+
+**Returns:**
+
+- -1 on failure otherwise 0 for success
+
+Back to [interface description](#module-guest_memoryh).
+
+### Function `vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`
+
+Map a reservation into the VM's virtual address space from given frames
+
+**Parameters:**
+
+- `vm {vm_t *}`: A handle to the VM
+- `reservation {vm_memory_reservation_t *}`: Pointer to reservation object being mapped
+- `frames {seL4_CPtr *}`: Array of frame caps
+- `num_frames {size_t}`: Number of frame caps
+- `frame_size_bits {size_t}`: Bit size of a single frame
 
 **Returns:**
 

@@ -135,6 +135,20 @@ int vm_map_reservation(vm_t *vm, vm_memory_reservation_t *reservation, memory_ma
                        void *cookie);
 
 /***
+ * @function vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)
+ * Map a reservation into the VM's virtual address space from given frames
+ * @param {vm_t *} vm                                   A handle to the VM
+ * @param {vm_memory_reservation_t *} reservation       Pointer to reservation object being mapped
+ * @param {seL4_CPtr *} frames                          Array of frame caps
+ * @param {size_t} num_frames                           Number of frame caps
+ * @param {size_t} frame_size_bits                      Bit size of a single frame
+ * @return                                              -1 on failure otherwise 0 for success
+ */
+int vm_map_reservation_frames(vm_t *vm, vm_memory_reservation_t *reservation,
+                              seL4_CPtr *frames, size_t num_frames,
+                              size_t frame_size_bits);
+
+/***
  * @function vm_get_reservation_memory_region(reservation, addr, size)
  * Get the memory region information (address & size) from a given reservation
  * @param {vm_memory_reservation_t *} reservation           Pointer to reservation object

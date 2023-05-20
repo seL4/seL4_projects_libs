@@ -60,6 +60,13 @@ typedef struct res_tree {
     struct res_tree *right;
 } res_tree;
 
+struct frames_map_iterator_cookie {
+    seL4_CPtr *frames;
+    size_t num_frames;
+    size_t frame_size_bits;
+    uintptr_t start;
+};
+
 static inline int reservation_node_cmp(res_tree *x, res_tree *y)
 {
     if (x->addr < y->addr) {
@@ -513,6 +520,39 @@ int vm_map_reservation(vm_t *vm, vm_memory_reservation_t *reservation,
     }
 
     return 0;
+}
+
+static vm_frame_t frames_map_memory_iterator(uintptr_t page_start, void *cookie)
+{
+    vm_frame_t frame_result = { seL4_CapNull, seL4_NoRights, 0, 0 };
+    struct frames_map_iterator_cookie *it = cookie;
+
+    size_t frame_idx = (page_start - it->start) >> it->frame_size_bits;
+    if (frame_idx >= it->num_frames) {
+        return frame_result;
+    }
+
+    frame_result.cptr = it->frames[frame_idx];
+    frame_result.rights = seL4_AllRights;
+    frame_result.vaddr = page_start;
+    frame_result.size_bits = it->frame_size_bits;
+
+    return frame_result;
+}
+
+int vm_map_reservation_frames(vm_t *vm, vm_memory_reservation_t *reservation,
+                              seL4_CPtr *frames, size_t num_frames,
+                              size_t frame_size_bits)
+{
+    struct frames_map_iterator_cookie cookie = {
+        .frames = frames,
+        .num_frames = num_frames,
+        .frame_size_bits = frame_size_bits,
+        .start = reservation->addr,
+    };
+
+    return vm_map_reservation(vm, reservation, frames_map_memory_iterator,
+                              &cookie);
 }
 
 void vm_get_reservation_memory_region(vm_memory_reservation_t *reservation, uintptr_t *addr, size_t *size)
