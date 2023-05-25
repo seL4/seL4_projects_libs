@@ -80,7 +80,7 @@ Datastructure representing a dataport of a crossvm connection
 
 **Elements:**
 
-- `size {size_t}`: The size of the crossvm dataport
+- `frame_size_bits {size_t}`: Bit size of a single frame in the `frames` member
 - `num_frames {int}`: Total number of frames in the `frames` member
 - `frames {seL4_CPtr *}`: The set of frames backing the dataport
 

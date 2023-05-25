@@ -147,8 +147,7 @@ static int reserve_event_bar(vm_t *vm, uintptr_t event_bar_address, struct conne
 static int reserve_dataport_memory(vm_t *vm, crossvm_dataport_handle_t *dataport, uintptr_t dataport_address,
                                    struct connection_info *info)
 {
-    size_t size = dataport->size;
-    unsigned int num_frames = dataport->num_frames;
+    size_t size = dataport->num_frames * BIT(dataport->frame_size_bits);
     seL4_CPtr *frames = dataport->frames;
 
     vm_memory_reservation_t *dataport_reservation = vm_reserve_memory_at(vm, dataport_address, size,
@@ -161,8 +160,8 @@ static int reserve_dataport_memory(vm_t *vm, crossvm_dataport_handle_t *dataport
     }
 
     int err = vm_map_reservation_frames(vm, dataport_reservation, frames,
-                                        num_frames,
-                                        BYTES_TO_SIZE_BITS(size / num_frames));
+                                        dataport->num_frames,
+                                        dataport->frame_size_bits);
     if (err) {
         ZF_LOGE("Failed to map dataport memory");
         return -1;
@@ -226,7 +225,7 @@ static int initialise_connections(vm_t *vm, uintptr_t connection_base_addr, cros
          * Linux from remapping the devices, which the vpci device can't emulate.
          */
         crossvm_dataport_handle_t *dataport = connections[i].dataport;
-        uintptr_t dataport_size = dataport->size;
+        size_t dataport_size = dataport->num_frames * BIT(dataport->frame_size_bits);
         err = reserve_event_bar(vm, connection_curr_addr, &info[i]);
         if (err) {
             ZF_LOGE("Failed to create event bar (id:%d)", i);
