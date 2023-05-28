@@ -208,21 +208,6 @@ int vm_install_vpci(vm_t *vm, vmm_io_port_list_t *io_port, vmm_pci_space_t *pci)
     return 0;
 }
 
-static int append_prop_with_cells(void *fdt, int offset,  uint64_t val, int num_cells, const char *name)
-{
-    int err;
-    if (num_cells == 2) {
-        err = fdt_appendprop_u64(fdt, offset, name, val);
-    } else if (num_cells == 1) {
-        err = fdt_appendprop_u32(fdt, offset, name, val);
-    } else {
-        ZF_LOGE("non-supported arch");
-        err = -1;
-    }
-
-    return err;
-}
-
 int fdt_generate_vpci_node(vm_t *vm, vmm_pci_space_t *pci, void *fdt, int gic_phandle)
 {
     int err;
@@ -236,18 +221,18 @@ int fdt_generate_vpci_node(vm_t *vm, vmm_pci_space_t *pci, void *fdt, int gic_ph
     }
 
     /* Basic PCI Properties*/
-    FDT_OP(append_prop_with_cells(fdt, pci_node, 0x3, 1, "#address-cells"));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, 0x2, 1, "#size-cells"));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, 0x1, 1, "#interrupt-cells"));
+    FDT_OP(fdt_appendprop_u32(fdt, pci_node, "#address-cells", 0x3));
+    FDT_OP(fdt_appendprop_u32(fdt, pci_node, "#size-cells", 0x2));
+    FDT_OP(fdt_appendprop_u32(fdt, pci_node, "#interrupt-cells", 0x1));
     FDT_OP(fdt_appendprop_string(fdt, pci_node, "compatible", "pci-host-cam-generic"));
     FDT_OP(fdt_appendprop_string(fdt, pci_node, "device_type", "pci"));
     FDT_OP(fdt_appendprop(fdt, pci_node, "dma-coherent", NULL, 0));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, 0x0, 1, "bus-range"));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, 0x1, 1, "bus-range"));
+    FDT_OP(fdt_appendprop_u32(fdt, pci_node, "bus-range", 0x0));
+    FDT_OP(fdt_appendprop_u32(fdt, pci_node, "bus-range", 0x1));
 
     /* PCI Host CFG Region */
-    FDT_OP(append_prop_with_cells(fdt, pci_node, PCI_CFG_REGION_ADDR, address_cells, "reg"));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, PCI_CFG_REGION_SIZE, size_cells, "reg"));
+    FDT_OP(fdt_appendprop_uint(fdt, pci_node, "reg", PCI_CFG_REGION_ADDR, address_cells));
+    FDT_OP(fdt_appendprop_uint(fdt, pci_node, "reg", PCI_CFG_REGION_SIZE, size_cells));
 
     /* PCI IO Region Range */
     struct pci_fdt_address pci_io_range_addr;
@@ -255,7 +240,7 @@ int fdt_generate_vpci_node(vm_t *vm, vmm_pci_space_t *pci, void *fdt, int gic_ph
     pci_io_range_addr.mid = 0;
     pci_io_range_addr.low = 0;
     FDT_OP(fdt_appendprop(fdt, pci_node, "ranges", &pci_io_range_addr, sizeof(struct pci_fdt_address)));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, PCI_IO_REGION_ADDR, address_cells, "ranges"));
+    FDT_OP(fdt_appendprop_uint(fdt, pci_node, "ranges", PCI_IO_REGION_ADDR, address_cells));
     FDT_OP(fdt_appendprop_u64(fdt, pci_node, "ranges", PCI_IO_REGION_SIZE));
 
     /* PCI Mem Region Range */
@@ -264,7 +249,7 @@ int fdt_generate_vpci_node(vm_t *vm, vmm_pci_space_t *pci, void *fdt, int gic_ph
     pci_mem_range_addr.mid = cpu_to_fdt32(PCI_MEM_REGION_ADDR >> 32);
     pci_mem_range_addr.low = cpu_to_fdt32((uint32_t)PCI_MEM_REGION_ADDR);
     FDT_OP(fdt_appendprop(fdt, pci_node, "ranges", &pci_mem_range_addr, sizeof(pci_mem_range_addr)));
-    FDT_OP(append_prop_with_cells(fdt, pci_node, PCI_MEM_REGION_ADDR, address_cells, "ranges"));
+    FDT_OP(fdt_appendprop_uint(fdt, pci_node, "ranges", PCI_MEM_REGION_ADDR, address_cells));
     FDT_OP(fdt_appendprop_u64(fdt, pci_node, "ranges", PCI_MEM_REGION_SIZE));
 
     /* PCI IRQ map */
