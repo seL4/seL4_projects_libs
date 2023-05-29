@@ -280,12 +280,13 @@ int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
     eisr <<= 32;
     eisr |= seL4_GetMR(seL4_VGICMaintenance_EISR0);
 
-    if (eisr) {
+    while (eisr) {
         int idx = __builtin_ctzll(eisr);
         int err = handle_vgic_maintenance(vcpu, idx);
         if (err) {
             ZF_LOGF("vGIC maintenance handler failed (error %d)", err);
         }
+        eisr &= ~(1ULL << idx);
     }
 
     seL4_MessageInfo_t reply;
