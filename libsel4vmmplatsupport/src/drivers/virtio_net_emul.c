@@ -225,7 +225,8 @@ static int emul_notify(virtio_emul_t *emul)
     return 0;
 }
 
-bool net_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsigned int size, unsigned int *result)
+bool net_device_emul_io_in(struct virtio_emul *emul, unsigned int offset,
+                           unsigned int size, unsigned int *result)
 {
     bool handled = false;
     switch (offset) {
@@ -244,7 +245,8 @@ bool net_device_emul_io_in(struct virtio_emul *emul, unsigned int offset, unsign
     return handled;
 }
 
-bool net_device_emul_io_out(struct virtio_emul *emul, unsigned int offset, unsigned int size, unsigned int value)
+bool net_device_emul_io_out(struct virtio_emul *emul, unsigned int offset,
+                            unsigned int size, unsigned int value)
 {
     bool handled = false;
     switch (offset) {
