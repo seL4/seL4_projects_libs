@@ -226,6 +226,7 @@ static uintptr_t load_guest_module_image(vm_t *vm, const char *image_name, uintp
     switch (ret_file_type) {
     case IMG_DTB:
     case IMG_INITRD_GZ:
+    case IMG_BIN:
         load_addr = load_base_addr;
         break;
     default:
