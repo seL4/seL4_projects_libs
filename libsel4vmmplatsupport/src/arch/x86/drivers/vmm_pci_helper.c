@@ -151,7 +151,7 @@ ioport_fault_result_t vmm_pci_io_port_out(vm_vcpu_t *vcpu, void *cookie, unsigne
         ZF_LOGI("Guest attempted access to non existent device %02x:%02x.%d register 0x%x", addr.bus, addr.dev, addr.fun, reg);
         return IO_FAULT_HANDLED;
     }
-    int err = dev->iowrite(dev->cookie, reg + offset, size, value);
+    int err = dev->iowrite(dev->cookie, reg, size, value);
     if (err) {
         return IO_FAULT_ERROR;
     }

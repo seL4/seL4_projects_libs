@@ -22,13 +22,12 @@
 #include <sel4vm/guest_vm.h>
 #include <sel4vm/boot.h>
 #include <sel4vm/guest_irq_controller.h>
+#include <sel4vm/arch/guest_x86_irq_controller.h>
 #include <sel4vm/arch/ioports.h>
 #include "i8259.h"
 
 #define I8259_MASTER   0
 #define I8259_SLAVE    1
-
-#define PIC_NUM_PINS 16
 
 /*first programmable interrupt controller, master*/
 #define X86_IO_PIC_1_START   0x20
@@ -41,13 +40,6 @@
 /*ELCR (edge/level control register) for IRQ line*/
 #define X86_IO_ELCR_START      0x4d0
 #define X86_IO_ELCR_END        0x4d1
-
-typedef struct i8259_irq_ack {
-    irq_ack_fn_t callback;
-    void *cookie;
-} i8259_irq_ack_t;
-
-static i8259_irq_ack_t irq_ack_fns[PIC_NUM_PINS];
 
 /* PIC Machine state. */
 struct i8259_state {
@@ -175,8 +167,10 @@ static void pic_clear_isr(vm_t *vm, struct i8259_state *s, int irq)
     }
 
     if (irq != 2) {
-        if (irq_ack_fns[irq].callback) {
-            irq_ack_fns[irq].callback(vm->vcpus[BOOT_VCPU], irq, irq_ack_fns[irq].cookie);
+        if (irq >= I8259_NR_IRQS)
+            assert(0);
+        if (irq_info[irq].callback) {
+            irq_info[irq].callback(vm->vcpus[BOOT_VCPU], irq, (void *) irq_info[irq].cookie);
         }
     }
 }
@@ -277,7 +271,7 @@ static void pic_reset(vm_t *vm, struct i8259_state *s)
     }
 #endif
 
-    for (irq = 0; irq < PIC_NUM_PINS / 2; irq++) {
+    for (irq = 0; irq < I8259_NR_IRQS / 2; irq++) {
         if (edge_irr & (1 << irq)) {
             pic_clear_isr(vm, s, irq);
         }
@@ -368,7 +362,7 @@ static void pic_ioport_write(vm_vcpu_t *vcpu, struct i8259_state *s, unsigned in
             //off = (s == &s->pics_state->pics[0]) ? 0 : 8;
             s->imr = val;
 #if 0
-            for (irq = 0; irq < PIC_NUM_PINS / 2; irq++)
+            for (irq = 0; irq < I8259_NR_IRQS / 2; irq++)
                 if (imr_diff & (1 << irq))
                     /*FIXME: notify the status changes for IMR*/
                     kvm_fire_mask_notifiers(
@@ -714,21 +708,21 @@ int vm_set_irq_level(vm_vcpu_t *vcpu, int irq, int irq_level)
     return 0;
 }
 
-int vm_inject_irq(vm_vcpu_t *vcpu, int irq)
+int i8259_inject_irq(vm_vcpu_t *vcpu, int irq)
 {
     vm_set_irq_level(vcpu, irq, 1);
     vm_set_irq_level(vcpu, irq, 0);
     return 0;
 }
 
-int vm_register_irq(vm_vcpu_t *vcpu, int irq, irq_ack_fn_t fn, void *cookie)
+int i8259_register_irq(vm_vcpu_t *vcpu, int irq, irq_ack_fn_t fn, void *cookie)
 {
-    if (irq < 0 || irq >= PIC_NUM_PINS) {
+    if (irq < 0 || irq >= I8259_NR_IRQS) {
         ZF_LOGE("irq %d is invalid", irq);
         return -1;
     }
-    i8259_irq_ack_t *ack = &irq_ack_fns[irq];
-    ack->callback = fn;
-    ack->cookie = cookie;
+    irq_info_t *info = &irq_info[irq];
+    info->callback = fn;
+    info->cookie = (x86_irq_cookie_t *) cookie;
     return 0;
 }

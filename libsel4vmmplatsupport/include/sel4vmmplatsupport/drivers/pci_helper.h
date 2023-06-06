@@ -143,6 +143,20 @@ typedef struct pci_irq_emulation {
 } pci_irq_emulation_t;
 
 /***
+ * @struct pci_msi_emulation
+ * Wrapper data structure over a pci entry and its configuration space. This is leveraged to emulate
+ * MSI capabilities in an entry's configuration space
+ * @param {vmm_pci_entry_t} passthrough     PCI entry being emulated
+ * @param {int} vmm_irq                         The vmm's irq we want the msi to be forwarded to
+ * @param {uint8_t} msi_cap_offset          Offset of the MSI cap in the capability list
+ */
+typedef struct pci_msi_emulation {
+    vmm_pci_entry_t passthrough;
+    int vmm_irq;
+    uint8_t msi_cap_offset;
+} pci_msi_emulation_t;
+
+/***
  * @struct pci_passthrough_device
  * Datastructure providing direct passthrough access to a pci entry configuration space
  * @param {vmm_pci_address_t} addr          Address of PCI device
@@ -244,6 +258,16 @@ vmm_pci_entry_t vmm_pci_create_bar_emulation(vmm_pci_entry_t existing, int num_b
 vmm_pci_entry_t vmm_pci_create_irq_emulation(vmm_pci_entry_t existing, int irq);
 
 /***
+ * @function vmm_pci_create_msi_emulation(existing, vmm_irq)
+ * Construct a pci entry the emulates configuration space interrupt read/write's. The rest of the configuration space is passed on
+ * @param {vmm_pci_entry_t} existing    Existing PCI entry to wrap over and emulate its msi accesses
+ * @param {int} vmm_irq                 The vmm's irq we want the msi to be forwarded to
+ * @param {uint8_t} msi_cap_offset      Offset of the MSI cap in the capability list
+ * @return                              `vmm_pci_entry_t` for emulated irq device
+ */
+vmm_pci_entry_t vmm_pci_create_msi_emulation(vmm_pci_entry_t existing, int vmm_irq, uint8_t msi_cap_offset);
+
+/***
  * @function vmm_pci_create_cap_emulation(existing, num_caps, cap, num_ranges, range_starts, range_ends)
  * Capability space emulation. Takes list of addresses to use to form a capability linked list, as well as a
  * ranges of the capability space that should be directly disallowed. Assumes a type 0 device.
@@ -263,4 +287,4 @@ vmm_pci_entry_t vmm_pci_create_cap_emulation(vmm_pci_entry_t existing, int num_c
  * @param {vmm_pci_entry_t} existing    Existing PCI entry to wrap over with ignored MSI capabilities
  * @return                              `vmm_pci_entry_t` with an emulated capability space (ignoring MSI capabilties)
  */
-vmm_pci_entry_t vmm_pci_no_msi_cap_emulation(vmm_pci_entry_t existing);
+vmm_pci_entry_t vmm_pci_cap_emulation(vmm_pci_entry_t existing, bool enable_msi, int vmm_irq);

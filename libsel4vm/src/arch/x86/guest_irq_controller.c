@@ -7,7 +7,7 @@
 #include <sel4vm/guest_vm.h>
 #include <sel4vm/guest_memory.h>
 
-#include "i8259/i8259.h"
+#include "processor/i8259.h"
 #include "processor/apicdef.h"
 #include "processor/lapic.h"
 

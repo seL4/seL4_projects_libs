@@ -15,7 +15,7 @@
 #include <sel4vm/boot.h>
 
 #include "vm.h"
-#include "i8259/i8259.h"
+#include "processor/i8259.h"
 #include "guest_state.h"
 #include "processor/decode.h"
 #include "processor/lapic.h"
