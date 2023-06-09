@@ -24,7 +24,7 @@ typedef enum vcpu_context_reg {
     VCPU_CONTEXT_ESI,
     VCPU_CONTEXT_EDI,
     VCPU_CONTEXT_EBP,
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     VCPU_CONTEXT_R8,
     VCPU_CONTEXT_R9,
     VCPU_CONTEXT_R10,
@@ -33,7 +33,7 @@ typedef enum vcpu_context_reg {
     VCPU_CONTEXT_R13,
     VCPU_CONTEXT_R14,
     VCPU_CONTEXT_R15
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
 } vcpu_context_reg_t;
 
 /***

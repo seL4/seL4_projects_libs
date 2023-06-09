@@ -37,7 +37,7 @@
 /* We need to own the PSE and PAE bits up until the guest has actually turned on paging,
  * then it can control them
  */
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
 #define VM_VMCS_CR4_MASK           (X86_CR4_VMXE)
 #define VM_VMCS_CR4_VALUE          (X86_CR4_PAE)
 #else
@@ -126,7 +126,7 @@ static int make_guest_pdpt_continued(void *access_addr, void *vaddr, void *cooki
 
 static int make_guest_root_pd_continued(void *access_addr, void *vaddr, void *cookie)
 {
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     assert(NULL != cookie);
 
     vm_t *vm = (vm_t *)cookie;
@@ -156,14 +156,14 @@ static int make_guest_root_pd_continued(void *access_addr, void *vaddr, void *co
     if (error) {
         return error;
     }
-#else
+#else /* not CONFIG_X86_64_VTX_64BIT_GUESTS */
     /* Write into this frame as the init page directory: 4M pages, 1 to 1 mapping. */
     uint32_t *pd = vaddr;
     for (int i = 0; i < 1024; i++) {
         /* Present, write, user, page size 4M */
         pd[i] = (i << PAGE_BITS_4M) | PAGE_ENTRY;
     }
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     return 0;
 }
 
@@ -189,9 +189,9 @@ static int make_guest_address_space(vm_t *vm)
 
     void *cookie = NULL;
 
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     cookie = (void *) vm;
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     return vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace,
                                             (void *)GUEST_VSPACE_ROOT,
                                             seL4_PageBits, seL4_AllRights, 1,

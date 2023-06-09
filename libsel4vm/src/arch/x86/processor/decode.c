@@ -499,7 +499,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
             case 0xa1:
                 /* mov offset memory to eax */
                 instr++;
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
                 memcpy(&mem, instr, 4);
                 instr += 4;
 #else

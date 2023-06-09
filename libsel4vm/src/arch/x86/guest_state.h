@@ -100,7 +100,7 @@ typedef enum guest_user_context {
     USER_CONTEXT_ESI,
     USER_CONTEXT_EDI,
     USER_CONTEXT_EBP,
-#ifdef CONFIG_ARCH_X86_64
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
     USER_CONTEXT_R8,
     USER_CONTEXT_R9,
     USER_CONTEXT_R10,
@@ -109,7 +109,7 @@ typedef enum guest_user_context {
     USER_CONTEXT_R13,
     USER_CONTEXT_R14,
     USER_CONTEXT_R15,
-#endif
+#endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
     NUM_USER_CONTEXT_REGS
 } guest_user_context_t;
 
