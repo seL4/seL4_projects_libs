@@ -27,9 +27,17 @@ Author: W.A.
 /* TODO are these defined elsewhere? */
 #define IA32_PDE_SIZE(pde) (pde & BIT(7))
 #define IA32_PDE_PRESENT(pde) (pde & BIT(0))
+
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
+#define IA32_PTE_ADDR(pte) (pte & 0xFFFFFFFFFF000)
+#define IA32_PDPTE_ADDR(pdpte) (pdpte & 0xFFFFFC0000000)
+#define IA32_PDE_ADDR(pde) (pde & 0xFFFFFFFE00000)
+#else
 #define IA32_PTE_ADDR(pte) (pte & 0xFFFFF000)
 #define IA32_PDPTE_ADDR(pdpte) (pdpte & 0xC0000000)
 #define IA32_PDE_ADDR(pde) (pde & 0xFFE00000)
+#endif
+
 #define IA32_PSE_ADDR(pse) (pse & 0xFFC00000)
 
 #define IA32_OPCODE_S(op) (op & BIT(0))
@@ -175,22 +183,29 @@ int vm_fetch_instruction(vm_vcpu_t *vcpu, uintptr_t eip, uintptr_t cr3,
         uint64_t eip_47_39 = EXTRACT_BITS(eip, 9, 39);  /* Bits 47:39 of linear address */
         uint64_t eip_38_30 = EXTRACT_BITS(eip, 9, 30);  /* Bits 38:30 of linear address */
         uint64_t eip_29_21 = EXTRACT_BITS(eip, 9, 21);  /* Bits 29:21 of linear address */
-        uint64_t eip_20_0 = EXTRACT_BITS(eip, 21, 0);   /* Bits 20:0 of linear address */
+        uint64_t eip_20_12 = EXTRACT_BITS(eip, 9, 12);  /* Bits 20:12 of linear address */
 
+        uint64_t eip_29_0 = EXTRACT_BITS(eip, 30, 0);   /* Bits 29:0 of linear address */
+        uint64_t eip_20_0 = EXTRACT_BITS(eip, 21, 0);   /* Bits 20:0 of linear address */
+        uint64_t eip_11_0 = EXTRACT_BITS(eip, 12, 0);   /* Bits 11:0 of linear address */
+
+        /* Each entry is 8 bytes long, so left shift by 3 to get the offset */
         uint64_t pml4e = guest_get_phys_word(vcpu->vm, cr3 | (eip_47_39 << 3));
 
         assert(IA32_PDE_PRESENT(pml4e));
 
+        /* Each entry is 8 bytes long, so left shift by 3 to get the offset */
         uint64_t pdpte = guest_get_phys_word(vcpu->vm, IA32_PTE_ADDR(pml4e) | (eip_38_30 << 3));
 
         assert(IA32_PDE_PRESENT(pdpte));
 
         /* If this maps a 1GB page, then we can fetch the instruction now. */
         if (IA32_PDE_SIZE(pdpte)) {
-            instr_phys = IA32_PDPTE_ADDR(pdpte) + EXTRACT_BITS(eip, 29, 0);
+            instr_phys = IA32_PDPTE_ADDR(pdpte) + eip_29_0;
             goto fetch;
         }
 
+        /* Each entry is 8 bytes long, so left shift by 3 to get the offset */
         uint64_t pde = guest_get_phys_word(vcpu->vm, IA32_PTE_ADDR(pdpte) | (eip_29_21 << 3));
 
         assert(IA32_PDE_PRESENT(pde));
@@ -201,15 +216,14 @@ int vm_fetch_instruction(vm_vcpu_t *vcpu, uintptr_t eip, uintptr_t cr3,
             goto fetch;
         }
 
-        uint64_t pte = guest_get_phys_word(vcpu->vm, IA32_PTE_ADDR(pde) | (eip_20_0 << 3));
+        /* Each entry is 8 bytes long, so left shift by 3 to get the offset */
+        uint64_t pte = guest_get_phys_word(vcpu->vm, IA32_PTE_ADDR(pde) | (eip_20_12 << 3));
 
-        /* If this maps a 4KB page, then we can fetch the instruction now. */
-        if (IA32_PDE_SIZE(pte)) {
-            instr_phys = IA32_PTE_ADDR(pte) + EXTRACT_BITS(eip, 11, 0);
-            goto fetch;
-        }
+        assert(IA32_PDE_PRESENT(pte));
 
-        return -1;
+        /* This maps a 4KB page. We can fetch the instruction now. */
+        instr_phys = IA32_PTE_ADDR(pte) + eip_11_0;
+
     } else {
         // TODO implement page-boundary crossing properly
         assert((eip >> 12) == ((eip + len) >> 12));
