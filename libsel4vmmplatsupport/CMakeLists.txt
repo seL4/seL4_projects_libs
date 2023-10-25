@@ -23,7 +23,18 @@ config_option(
     "KernelPlatPC99"
 )
 
+config_option(
+    LibSel4VMMUseHPET
+    VMM_USE_HPET
+    "Use the High Precision Event Timer (HPET)"
+    DEPENDS
+    "KernelX86_64VTX64BitGuests"
+    DEFAULT
+    OFF
+)
+
 mark_as_advanced(LibSel4VMMPlatsupportVESAFrameBuffer)
+mark_as_advanced(LibSel4VMMUseHPET)
 
 add_config_library(sel4vmmplatsupport "${configure_string}")
 

@@ -19,8 +19,12 @@ Author: W.A. */
 #include <sel4vm/guest_memory_helpers.h>
 #include <platsupport/plat/acpi/acpi.h>
 
+#include <sel4vmmplatsupport/gen_config.h>
 #include <sel4vmmplatsupport/guest_memory_util.h>
 #include <sel4vmmplatsupport/arch/acpi.h>
+
+#define HPET_DEFAULT_PADDR 0xfed00000
+#define HPET_DEFAULT_TBID  0x8086a201
 
 #define APIC_FLAGS_ENABLED (1)
 
@@ -196,6 +200,26 @@ int make_guest_acpi_tables(vm_t *vm)
     num_tables++;
 
     // Could set up other tables here...
+
+#ifdef CONFIG_VMM_USE_HPET
+    // HPET
+    int hpet_size = sizeof(acpi_hpet_t);
+    acpi_hpet_t *hpet = calloc(1, hpet_size);
+    assert(NULL != hpet);
+
+    acpi_fill_table_head(&hpet->header, "HPET", 1);
+
+    hpet->event_timer_block_id = HPET_DEFAULT_TBID;
+    hpet->base_address.address = HPET_DEFAULT_PADDR;
+
+    hpet->header.length = hpet_size;
+    hpet->header.checksum = acpi_calc_checksum((char *)hpet, hpet_size);
+
+    tables[num_tables] = hpet;
+    table_sizes[num_tables] = hpet_size;
+
+    num_tables++;
+#endif
 
     // DSDT
     int dsdt_size = sizeof(acpi_dsdt_t);
