@@ -185,7 +185,12 @@ int vm_ram_find_largest_free_region(vm_t *vm, uintptr_t *addr, size_t *size)
     /* find the largest unallocated region */
     for (int i = 0; i < guest_memory->num_ram_regions; i++) {
         if (!guest_memory->ram_regions[i].allocated &&
-            guest_memory->ram_regions[i].size > largest_size) {
+            guest_memory->ram_regions[i].size > largest_size
+#ifdef CONFIG_X86_64_VTX_64BIT_GUESTS
+            && ((guest_memory->ram_regions[i].start +
+                 guest_memory->ram_regions[i].size) < UINT32_MAX)
+#endif
+           ) {
             largest = i;
             largest_size = guest_memory->ram_regions[i].size;
         }
