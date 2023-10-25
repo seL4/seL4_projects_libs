@@ -48,7 +48,15 @@ static int ram_region_cmp(const void *a, const void *b)
 {
     const vm_ram_region_t *aa = a;
     const vm_ram_region_t *bb = b;
-    return aa->start - bb->start;
+
+    /* qsort expected return values */
+    if (aa->start == bb->start) {
+        return 0;
+    } else if (aa->start < bb->start) {
+        return -1;
+    } else {
+        return 1;
+    }
 }
 
 static void sort_guest_ram_regions(vm_mem_t *guest_memory)
