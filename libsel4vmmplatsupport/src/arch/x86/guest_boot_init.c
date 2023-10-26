@@ -165,16 +165,19 @@ static int make_guest_e820_map(struct e820entry *e820, vm_mem_t *guest_memory)
         /* Increase region to size */
         e820[entry].size = guest_memory->ram_regions[i].start - e820[entry].addr + guest_memory->ram_regions[i].size;
     }
+
+#ifndef CONFIG_X86_64_VTX_64BIT_GUESTS
     /* Create empty region at the end */
     entry++;
     assert(entry < E820MAX);
     e820[entry].addr = e820[entry - 1].addr + e820[entry - 1].size;
     e820[entry].size = 0x100000000ull - e820[entry].addr;
     e820[entry].type = E820_RESERVED;
+#endif
     printf("Final e820 map is:\n");
     for (i = 0; i <= entry; i++) {
-        printf("\t0x%x - 0x%x type %d\n", (unsigned int)e820[i].addr, (unsigned int)(e820[i].addr + e820[i].size),
-               e820[i].type);
+        printf("\t0x%llx - 0x%llx: Type %d\n", (unsigned long long int)e820[i].addr,
+               (unsigned long long int)(e820[i].addr + e820[i].size), e820[i].type);
         assert(e820[i].addr < e820[i].addr + e820[i].size);
     }
     return entry + 1;
