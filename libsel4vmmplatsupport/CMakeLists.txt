@@ -65,4 +65,5 @@ target_link_libraries(
     sel4_autoconf
     sel4vm_Config
     usbdrivers_Config
+    sel4vmmplatsupport_Config
 )

@@ -8,6 +8,7 @@
 
 #include <autoconf.h>
 #include <sel4vm/gen_config.h>
+#include <sel4vmmplatsupport/gen_config.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,19 +92,20 @@ static void make_guest_screen_info(vm_t *vm, struct screen_info *info)
             }
         }
         if (error) {
-            ZF_LOGE("Failed to map vbe protected mode interface for VESA frame buffer. Disabling");
+            ZF_LOGE("Failed to map vbe protected mode interface for VESA frame buffer. Not disabling");
+        }
+
+        fbuffer_size = vmm_plat_vesa_fbuffer_size(&vbeinfo.vbeModeInfoBlock);
+        ZF_LOGI("VESA Frame buffer size: 0x%x\n", fbuffer_size);
+        vm_memory_reservation_t *reservation = vm_reserve_anon_memory(vm, fbuffer_size, 0x1000,
+                                                                      default_error_fault_callback, NULL, &base);
+        if (!reservation) {
+            ZF_LOGE("Failed to reserve base pointer for VESA frame buffer. Not Disabling\n");
         } else {
-            fbuffer_size = vmm_plat_vesa_fbuffer_size(&vbeinfo.vbeModeInfoBlock);
-            vm_memory_reservation_t *reservation = vm_reserve_anon_memory(vm, fbuffer_size, 0x1000,
-                                                                          default_error_fault_callback, NULL, &base);
-            if (!reservation) {
-                ZF_LOGE("Failed to reserve base pointer for VESA frame buffer. Disabling");
-            } else {
-                error = map_ut_alloc_reservation_with_base_paddr(vm, vbeinfo.vbeModeInfoBlock.vbe20.physBasePtr, reservation);
-                if (error) {
-                    ZF_LOGE("Failed to map base pointer for VESA frame buffer. Disabling");
-                    base = 0;
-                }
+            error = map_ut_alloc_reservation_with_base_paddr(vm, vbeinfo.vbeModeInfoBlock.vbe20.physBasePtr, reservation);
+            if (error) {
+                ZF_LOGE("Failed to map base pointer for VESA frame buffer. Disabling");
+                base = 0;
             }
         }
     }
