@@ -112,7 +112,7 @@ static void decode_imm_op(struct decode_op *decode_op)
 
 static void decode_invalid_op(struct decode_op *decode_op)
 {
-    ZF_LOGE("can't emulate instruction!\n");
+    ZF_LOGE("can't emulate instruction!");
     debug_print_instruction(decode_op->instr, decode_op->instr_len);
     assert(0);
 }
@@ -401,7 +401,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                                  2, vm_guest_ram_read_callback, &limit);
                     vm_ram_touch(vcpu->vm, mem + 2,
                                  4, vm_guest_ram_read_callback, &base);
-                    ZF_LOGD("lidtl %p\n", (void *)mem);
+                    ZF_LOGD("lidtl %p", (void *)mem);
 
                     vm_guest_state_set_idt_base(gs, base);
                     vm_guest_state_set_idt_limit(gs, limit);
@@ -417,7 +417,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                                  2, vm_guest_ram_read_callback, &limit);
                     vm_ram_touch(vcpu->vm, mem + 2,
                                  4, vm_guest_ram_read_callback, &base);
-                    ZF_LOGD("lgdtl %p; base = %x, limit = %x\n", (void *)mem,
+                    ZF_LOGD("lgdtl %p; base = %x, limit = %x", (void *)mem,
                             base, limit);
 
                     vm_guest_state_set_gdt_base(gs, base);
@@ -435,15 +435,15 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
 
                 if (*instr == 0xc0) {
                     vm_guest_state_set_cr0(gs, eax);
-                    ZF_LOGD("cr0 %lx\n", (long unsigned int)eax);
+                    ZF_LOGD("cr0 %lx", (long unsigned int)eax);
                 }
                 if (*instr == 0xd8) {
                     vm_guest_state_set_cr3(gs, eax);
-                    ZF_LOGD("cr3 %lx\n", (long unsigned int)eax);
+                    ZF_LOGD("cr3 %lx", (long unsigned int)eax);
                 }
                 if (*instr == 0xe0) {
                     vm_guest_state_set_cr4(gs, eax);
-                    ZF_LOGD("cr4 %lx\n", (long unsigned int)eax);
+                    ZF_LOGD("cr4 %lx", (long unsigned int)eax);
                 }
             } else if (*instr == 0x30) {
                 // wrmsr
@@ -457,7 +457,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 vm_get_thread_context_reg(vcpu, VCPU_CONTEXT_EDX, &edx);
                 if (MSR_EFER == ecx) {
                     vm_set_vmcs_field(vcpu, VMX_GUEST_EFER, (edx << 32) | eax);
-                    ZF_LOGD("wrmsr %lx %lx\n", ecx, (edx << 32) | eax);
+                    ZF_LOGD("wrmsr %lx %lx", ecx, (edx << 32) | eax);
                 }
 #endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
             } else {
@@ -487,7 +487,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 jmp_addr = *segment * SEG_MULT + base;
             }
             instr += 2;
-            ZF_LOGD("absolute jmpf $%p, cs now %04x\n", (void *)jmp_addr, *segment);
+            ZF_LOGD("absolute jmpf $%p, cs now %04x", (void *)jmp_addr, *segment);
             if (((int64_t)jmp_addr - (int64_t)(len + eip)) >= 0) {
                 vm_guest_state_set_cs_selector(gs, *segment);
                 return jmp_addr;
@@ -507,7 +507,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 instr += 2;
                 mem += *segment * SEG_MULT;
 #endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
-                ZF_LOGD("mov %p, eax\n", (void *)mem);
+                ZF_LOGD("mov %p, eax", (void *)mem);
                 uint32_t eax;
                 vm_ram_touch(vcpu->vm, mem,
                              4, vm_guest_ram_read_callback, &eax);
@@ -519,7 +519,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 instr++;
                 memcpy(&mem, instr, 4);
                 instr += 4;
-                ZF_LOGD("mov %lx, eax\n", mem);
+                ZF_LOGD("mov %lx, eax", mem);
                 vm_set_thread_context_reg(vcpu, VCPU_CONTEXT_EAX, mem);
                 break;
             case 0xb9:
@@ -527,7 +527,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 instr++;
                 memcpy(&mem, instr, 4);
                 instr += 4;
-                ZF_LOGD("mov %lx, ecx\n", mem);
+                ZF_LOGD("mov %lx, ecx", mem);
                 vm_set_thread_context_reg(vcpu, VCPU_CONTEXT_ECX, mem);
                 break;
             case 0x8b:
@@ -540,7 +540,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                     uint32_t edx;
                     vm_ram_touch(vcpu->vm, mem,
                                  4, vm_guest_ram_read_callback, &edx);
-                    ZF_LOGD("mov %x, edx\n", edx);
+                    ZF_LOGD("mov %x, edx", edx);
                     vm_set_thread_context_reg(vcpu, VCPU_CONTEXT_EDX, mem);
                 }
                 break;
@@ -554,7 +554,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                     seL4_Word esp = vm_guest_state_get_esp(gs, mem);
                     esp += mem;
                     vm_guest_state_set_esp(gs, esp);
-                    ZF_LOGD("add %lx, rsp\n", mem);
+                    ZF_LOGD("add %lx, rsp", mem);
                 }
                 break;
 #endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
@@ -575,7 +575,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                         size = 2;
                     }
                     instr += size;
-                    ZF_LOGD("mov $0x%x, %p\n", lit, (void *)mem);
+                    ZF_LOGD("mov $0x%x, %p", lit, (void *)mem);
                     vm_ram_touch(vcpu->vm, mem,
                                  size, vm_guest_ram_write_callback, &lit);
                 }
@@ -586,7 +586,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 instr++;
                 memcpy(&mem, instr, 4);
                 instr += 4;
-                ZF_LOGD("mov %lx, edx\n", mem);
+                ZF_LOGD("mov %lx, edx", mem);
                 vm_set_thread_context_reg(vcpu, VCPU_CONTEXT_EDX, mem);
 #else
                 //?????mov literal to dx
@@ -600,7 +600,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
                 instr++;
                 memcpy(&mem, instr, 4);
                 instr += 4;
-                ZF_LOGD(4, "mov %lx, esp\n", mem);
+                ZF_LOGD("mov %lx, esp", mem);
                 vm_guest_state_set_esp(gs, mem);
 #endif /* CONFIG_X86_64_VTX_64BIT_GUESTS */
                 break;
@@ -627,19 +627,19 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
 
                 if ((*instr == 0xd0) || (*instr == 0xd2)) {
                     vm_guest_state_set_ss_selector(gs, val);
-                    ZF_LOGD("ss %lx\n", (long unsigned int)val);
+                    ZF_LOGD("ss %lx", (long unsigned int)val);
                 } else if ((*instr == 0xd8) || (*instr == 0xda)) {
                     vm_guest_state_set_ds_selector(gs, val);
-                    ZF_LOGD("ds %lx\n", (long unsigned int)val);
+                    ZF_LOGD("ds %lx", (long unsigned int)val);
                 } else if ((*instr == 0xc0) || (*instr == 0xc2)) {
                     vm_guest_state_set_es_selector(gs, val);
-                    ZF_LOGD("es %lx\n", (long unsigned int)val);
+                    ZF_LOGD("es %lx", (long unsigned int)val);
                 } else if (*instr == 0xe2) {
                     vm_guest_state_set_fs_selector(gs, val);
-                    ZF_LOGD("fs %lx\n", (long unsigned int)val);
+                    ZF_LOGD("fs %lx", (long unsigned int)val);
                 } else if (*instr == 0xea) {
                     vm_guest_state_set_gs_selector(gs, val);
-                    ZF_LOGD("gs %lx\n", (long unsigned int)val);
+                    ZF_LOGD("gs %lx", (long unsigned int)val);
                 }
 
                 instr++;
@@ -666,7 +666,7 @@ uintptr_t vm_emulate_realmode(vm_vcpu_t *vcpu, uint8_t *instr_buf,
             }
         }
 
-        ZF_LOGI("read %zu bytes\n", (size_t)(instr - instr_buf));
+        ZF_LOGI("read %zu bytes", (size_t)(instr - instr_buf));
     }
 
     return 0;
