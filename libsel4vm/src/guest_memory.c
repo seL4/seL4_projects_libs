@@ -69,19 +69,18 @@ struct frames_map_iterator_cookie {
 
 static inline int reservation_node_cmp(res_tree *x, res_tree *y)
 {
-    if (x->addr < y->addr) {
-        if (x->addr + x->size > y->addr) {
-            /* The two regions intersect */
-            return 0;
-        } else {
-            return -1;
-        }
+    if (x->addr < y->addr && y->addr - x->addr >= x->size) {
+        /* x is before y */
+        return -1;
     }
-    if (x->addr < y->addr + y->size) {
-        /* The two regions intersect */
-        return 0;
+
+    if (x->addr > y->addr && x->addr - y->addr >= y->size) {
+        /* y is before x */
+        return 1;
     }
-    return 1;
+
+    /* regions intersect */
+    return 0;
 }
 
 SGLIB_DEFINE_RBTREE_PROTOTYPES(res_tree, left, right, color_field, reservation_node_cmp);
@@ -263,7 +262,7 @@ static vm_memory_reservation_t *find_anon_reservation_by_addr(uintptr_t addr, si
 
     for (int i = 0; i < num_anon_reservations; i++) {
         vm_memory_reservation_t *curr_res = reservations[i];
-        if (curr_res->addr <= addr && curr_res->addr + curr_res->size >= addr + size) {
+        if (is_subregion(curr_res->addr, curr_res->size, addr, size)) {
             return curr_res;
         }
     }
@@ -282,7 +281,7 @@ memory_fault_result_t vm_memory_handle_fault(vm_t *vm, vm_vcpu_t *vcpu, uintptr_
         return FAULT_UNHANDLED;
     }
 
-    if ((reservation_node->addr + size) > (reservation_node->addr + reservation_node->size)) {
+    if (!is_subregion(reservation_node->addr, reservation_node->size, addr, size)) {
         ZF_LOGE("Failed to handle memory fault: Invalid fault region");
         return FAULT_ERROR;
     }
@@ -466,30 +465,42 @@ int vm_free_reserved_memory(vm_t *vm, vm_memory_reservation_t *reservation)
 int map_vm_memory_reservation(vm_t *vm, vm_memory_reservation_t *vm_reservation,
                               memory_map_iterator_fn map_iterator, void *map_cookie)
 {
-    int err;
-    uintptr_t reservation_addr = vm_reservation->addr;
-    size_t reservation_size = vm_reservation->size;
     uintptr_t current_addr = vm_reservation->addr;
+    size_t bytes_left = vm_reservation->size;
 
-    while (current_addr < reservation_addr + reservation_size) {
+    while (bytes_left) {
         vm_frame_t reservation_frame = map_iterator(current_addr, map_cookie);
+
         if (reservation_frame.cptr == seL4_CapNull) {
-            ZF_LOGE("Failed to get frame for reservation address 0x%lx", current_addr);
+            ZF_LOGE("Failed to get frame for reservation address 0x%"PRIxPTR, current_addr);
             break;
         }
+
+        if (bytes_left < BIT(reservation_frame.size_bits)) {
+            ZF_LOGE("Mapping frame of size %zu to 0x%"PRIxPTR "overflows reservation %zu bytes at 0x%"PRIxPTR,
+                    BIT(reservation_frame.size_bits), current_addr,
+                    vm_reservation->size, vm_reservation->addr);
+            break;
+        }
+
         int ret = vspace_deferred_rights_map_pages_at_vaddr(&vm->mem.vm_vspace, &reservation_frame.cptr, NULL,
                                                             (void *)reservation_frame.vaddr, 1, reservation_frame.size_bits,
                                                             reservation_frame.rights, vm_reservation->vspace_reservation);
         if (ret) {
             ZF_LOGE("Failed to map address 0x%"PRIxPTR" into guest vm vspace", reservation_frame.vaddr);
-            return -1;
+            break;
         }
+
+        /* No underflow here: bytes_left >= frame size, see check above */
+        bytes_left -= BIT(reservation_frame.size_bits);
         current_addr += BIT(reservation_frame.size_bits);
     }
+
     vm_reservation->memory_map_iterator = NULL;
     vm_reservation->memory_iterator_cookie = NULL;
-    vm_reservation->is_mapped = true;
-    return 0;
+    vm_reservation->is_mapped = (bytes_left == 0);
+
+    return vm_reservation->is_mapped ? 0 : -1;
 }
 
 int vm_map_reservation(vm_t *vm, vm_memory_reservation_t *reservation,

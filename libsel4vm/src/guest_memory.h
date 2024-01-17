@@ -10,6 +10,21 @@
 #include <sel4vm/guest_memory.h>
 
 /**
+ * Check whether a region is a subregion of another region
+ * @param {uintptr_t} start           Start of parent region
+ * @param {size_t} size               Size of parent region
+ * @param {uintptr_t} subreg_start    Start of potential subregion
+ * @param {size_t} subreg_size        Size of potential subregion
+ * @return                            True if subregion fits in parent completely, false otherwise
+ */
+static inline bool is_subregion(uintptr_t start, size_t size,
+                                uintptr_t subreg_start, size_t subreg_size)
+{
+    return (subreg_start >= start) && (subreg_size <= size) &&
+           (subreg_start - start <= size - subreg_size);
+}
+
+/**
  * Handle a vm memory fault through searching previously created reservations and invoking the appropriate fault callback
  * @param {vm_t *} vm               A handle to the VM
  * @param {vm_vcpu_t *} vcpu        A handle to the faulting vcpu
