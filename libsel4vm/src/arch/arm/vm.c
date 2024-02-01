@@ -181,7 +181,7 @@ int vcpu_start(vm_vcpu_t *vcpu)
          */
         vmpidr_val = BIT(24) | BIT(31);
     } else {
-        vmpidr_val = vcpu->target_cpu;
+        vmpidr_val = vcpu->vcpu_id;
     }
     err = vm_set_arm_vcpu_reg(vcpu, vmpidr_reg, vmpidr_val);
     if (err) {
@@ -189,6 +189,7 @@ int vcpu_start(vm_vcpu_t *vcpu)
         return -1;
     }
 #endif
+    ZF_LOGE("Calling TBC Resume");
     return seL4_TCB_Resume(vm_get_vcpu_tcb(vcpu));
 }
 
