@@ -189,6 +189,7 @@ int vcpu_start(vm_vcpu_t *vcpu)
         return -1;
     }
 #endif
+    ZF_LOGE("Calling TBC Resume");
     return seL4_TCB_Resume(vm_get_vcpu_tcb(vcpu));
 }
 
