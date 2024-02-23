@@ -168,7 +168,6 @@ int vcpu_start(vm_vcpu_t *vcpu)
     seL4_Word vmpidr_val;
     seL4_Word vmpidr_reg;
 
-#if CONFIG_MAX_NUM_NODES > 1
 #ifdef CONFIG_ARCH_AARCH64
     vmpidr_reg = seL4_VCPUReg_VMPIDR_EL2;
 #else
@@ -188,7 +187,6 @@ int vcpu_start(vm_vcpu_t *vcpu)
         ZF_LOGE("Failed to set VMPIDR register");
         return -1;
     }
-#endif
     return seL4_TCB_Resume(vm_get_vcpu_tcb(vcpu));
 }
 
