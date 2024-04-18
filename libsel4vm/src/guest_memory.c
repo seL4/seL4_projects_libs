@@ -475,7 +475,7 @@ int map_vm_memory_reservation(vm_t *vm, vm_memory_reservation_t *vm_reservation,
         vm_frame_t reservation_frame = map_iterator(current_addr, map_cookie);
         if (reservation_frame.cptr == seL4_CapNull) {
             ZF_LOGE("Failed to get frame for reservation address 0x%lx", current_addr);
-            break;
+            return -1;
         }
         int ret = vspace_deferred_rights_map_pages_at_vaddr(&vm->mem.vm_vspace, &reservation_frame.cptr, NULL,
                                                             (void *)reservation_frame.vaddr, 1, reservation_frame.size_bits,
