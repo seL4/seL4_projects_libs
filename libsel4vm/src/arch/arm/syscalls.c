@@ -120,7 +120,7 @@ int vm_syscall_handler(vm_vcpu_t *vcpu)
 {
     int err;
     err = handle_syscall(vcpu);
-    if (!err) {
+    if (err == VM_EXIT_HANDLED) {
         seL4_MessageInfo_t reply;
         reply = seL4_MessageInfo_new(0, 0, 0, 0);
         seL4_Reply(reply);
