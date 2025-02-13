@@ -11,7 +11,7 @@
 const struct device dev_clkcar = {
     .name = "clkcar",
     .pstart = TK1_CLKCAR_PADDR,
-    .size = PAGE_SIZE,
+    .size = PAGE_SIZE_4K,
     .handle_device_fault = NULL,
     .priv = NULL
 };

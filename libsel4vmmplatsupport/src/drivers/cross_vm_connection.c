@@ -139,7 +139,7 @@ static int reserve_event_bar(vm_t *vm, uintptr_t event_bar_address, struct conne
         return -1;
     }
     /* Zero out memory */
-    memset(info->event_registers, 0, PAGE_SIZE);
+    memset(info->event_registers, 0, PAGE_SIZE_4K);
     info->event_address = event_bar_address;
     return 0;
 }
