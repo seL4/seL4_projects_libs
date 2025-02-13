@@ -22,7 +22,7 @@
 const struct device dev_usb = {
     .name = "usb",
     .pstart = 0x7d004000,
-    .size = PAGE_SIZE,
+    .size = PAGE_SIZE_4K,
     .priv = NULL
 };
 

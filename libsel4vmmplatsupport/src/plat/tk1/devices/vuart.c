@@ -12,7 +12,7 @@
 const struct device dev_uartd = {
     .name = "uartd",
     .pstart = UARTD_PADDR,
-    .size = PAGE_SIZE,
+    .size = PAGE_SIZE_4K,
     .handle_device_fault = NULL,
     .priv = NULL
 };
