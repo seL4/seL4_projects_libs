@@ -425,13 +425,15 @@ static memory_fault_result_t vgic_dist_reg_write(vm_t *vm, vm_vcpu_t *vcpu,
     switch (offset) {
     case RANGE32(GIC_DIST_CTLR, GIC_DIST_CTLR):
         data = fault_get_data(fault);
-        if (data == 1) {
+        if (data & GIC_DIST_CTLR_EN_GRP0) {
             vgic_dist_enable(vgic, vm);
-        } else if (data == 0) {
-            vgic_dist_disable(vgic, vm);
         } else {
-            ZF_LOGE("Unknown enable register encoding");
+            vgic_dist_disable(vgic, vm);
         }
+        ZF_LOGW_IF(data & GIC_DIST_CTLR_EN_GRP1,
+                   "ignore bit EnableGrp1 in DIST_CTLR write");
+        ZF_LOGE_IF(data & ~(GIC_DIST_CTLR_EN_GRP0 | GIC_DIST_CTLR_EN_GRP1),
+                   "ignore unknown bits in DIST_CTLR write 0x%x", data);
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
         break;
