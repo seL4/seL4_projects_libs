@@ -68,3 +68,6 @@
 #define GIC_DIST_SGI_CPU_TARGET_LIST_MASK       0xFF << GIC_DIST_SGI_CPU_TARGET_LIST_SHIFT
 
 #define GIC_DIST_SGI_INTID_MASK                 0xF
+
+#define GIC_DIST_CTLR_EN_GRP0                   (1U << 0)
+#define GIC_DIST_CTLR_EN_GRP1                   (1U << 1)
