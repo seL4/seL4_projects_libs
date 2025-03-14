@@ -9,25 +9,13 @@
 name: seL4Test
 
 on:
-  push:
-    branches: [master]
   pull_request:
+    paths-ignore:
+      - 'LICENSES/**'
+      - '*.md'
+  workflow_dispatch:
 
 jobs:
-  cparser:
-    name: Simulation
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        march: [armv7a, armv8a, nehalem, rv32imac, rv64imac]
-        compiler: [gcc, clang]
-        exclude:
-          - march: rv32imac
-            compiler: clang
-          - march: rv64imac
-            compiler: clang
-    steps:
-    - uses: seL4/ci-actions/sel4test-sim@master
-      with:
-        march: ${{ matrix.march }}
-        compiler: ${{ matrix.compiler }}
+  sim:
+    name: Sim
+    uses: seL4/ci-actions/.github/workflows/sel4test-sim.yml@master
