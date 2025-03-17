@@ -126,24 +126,6 @@ static inline bool is_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_i
     return is_spi_enabled(gic_dist, irq);
 }
 
-static inline bool is_sgi_ppi_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
-{
-    return !!(gic_dist->active0[vcpu_id] & IRQ_BIT(irq));
-}
-
-static inline bool is_spi_active(struct gic_dist_map *gic_dist, int irq)
-{
-    return !!(gic_dist->active[IRQ_IDX(irq)] & IRQ_BIT(irq));
-}
-
-static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
-{
-    if (irq < NUM_VCPU_LOCAL_VIRQS) {
-        return is_sgi_ppi_active(gic_dist, irq, vcpu_id);
-    }
-    return is_spi_active(gic_dist, irq);
-}
-
 static int vgic_dist_enable(vgic_t *vgic, vm_t *vm)
 {
     assert(vgic);
