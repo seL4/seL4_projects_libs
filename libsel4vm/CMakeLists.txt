@@ -38,6 +38,17 @@ config_string(
     "LibSel4VMVMXTimerDebug"
 )
 
+config_option(
+    LibSel4VMUseTranslationVspace
+    LIB_SEL4VM_USE_TRANSLATION_VSPACE
+    "Setup a translation vspace to track VM's pages in VMM's vspace.
+    This prevents VMMs from mapping/unmapping guest pages while reading from or
+    writing to guest memory. This is required when running a multicore VM setup
+    due to conflicting reservations by the VMMs"
+    DEFAULT
+    OFF
+)
+
 mark_as_advanced(LibSel4VMDeferMemoryMap LibSel4VMVMXTimerDebug LibSel4VMVMXTimerTimeout)
 
 add_config_library(sel4vm "${configure_string}")
