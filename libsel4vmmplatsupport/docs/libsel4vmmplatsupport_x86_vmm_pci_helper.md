@@ -38,7 +38,7 @@ PCI device. This will map MMIO and IO-based bars.
 
 - -1 for error, otherwise the number of bars mapped into the VM (>=0)
 
-Back to [interface description](#module-vmm_pci_helperh).
+Back to [interface description](#interface-vmm_pci_helperh).
 
 ### Function `vmm_pci_io_port_in(vcpu, cookie, port_no, size, result)`
 
@@ -55,7 +55,7 @@ Emulates IOPort in access on the VMM Virtual PCI device
 
 No return
 
-Back to [interface description](#module-vmm_pci_helperh).
+Back to [interface description](#interface-vmm_pci_helperh).
 
 ### Function `vmm_pci_io_port_out(vcpu, cookie, port_no, size, value)`
 
@@ -72,7 +72,7 @@ Emulates IOPort out access on the VMM Virtual PCI device
 
 No return
 
-Back to [interface description](#module-vmm_pci_helperh).
+Back to [interface description](#interface-vmm_pci_helperh).
 
 
 Back to [top](#).

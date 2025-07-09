@@ -38,7 +38,7 @@ Handle a vcpu exception given the HSR value - Syndrome information
 
 - -1 on error, otherwise 0 for success
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `register_arm_vcpu_exception_handler(ec_class, exception_handler)`
 
@@ -53,7 +53,7 @@ Register a handler to a vcpu exception class
 
 No return
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 
 Back to [top](#).

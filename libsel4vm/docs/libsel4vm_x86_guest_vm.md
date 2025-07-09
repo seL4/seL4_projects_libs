@@ -39,7 +39,7 @@ Structure representing x86 specific vm properties
 - `ioport_list {vm_io_port_list_t}`: List of registered ioport handlers
 - `i8259_gs {i8259_t *}`: PIC machine state
 
-Back to [interface description](#module-guest_vm_archh).
+Back to [interface description](#interface-guest_vm_archh).
 
 ### Struct `vm_vcpu_arch`
 
@@ -50,7 +50,7 @@ Structure representing x86 specific vcpu properties
 - `guest_state {guest_state_t *}`: Current VCPU State
 - `lapic {vm_lapic_t *}`: VM local apic
 
-Back to [interface description](#module-guest_vm_archh).
+Back to [interface description](#interface-guest_vm_archh).
 
 
 Back to [top](#).

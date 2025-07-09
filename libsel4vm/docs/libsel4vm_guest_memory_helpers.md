@@ -36,7 +36,7 @@ Useful to avoid having to re-define a fault callback on regions that should be m
 
 - Always returns FAULT_ERROR
 
-Back to [interface description](#module-guest_memory_helpersh).
+Back to [interface description](#interface-guest_memory_helpersh).
 
 
 Back to [top](#).

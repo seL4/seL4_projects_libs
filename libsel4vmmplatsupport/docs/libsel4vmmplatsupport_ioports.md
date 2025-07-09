@@ -52,7 +52,7 @@ This is used when registering ioport handlers of type 'IOPORT_FREE'
 
 - 0 for success, otherwise -1 for error
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Function `vmm_io_port_add_handler(io_list, ioport_range, ioport_interface, port_type)`
 
@@ -69,7 +69,7 @@ Add an io port range for emulation
 
 - NULL for error, otherwise pointer to newly created ioport entry
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Function `emulate_io_handler(io_port, port_no, is_in, size, data)`
 
@@ -87,7 +87,7 @@ From a set of registered ioports, emulate an io instruction given a current iopo
 
 - 0 if handled, 1 if unhandled, otherwise -1 for error
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 
 ## Structs
@@ -104,7 +104,7 @@ Range of ioport handler
 - `end {uint16_t}`: End address of ioport range
 - `size {uint16_t}`: Size of ioport range
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Struct `ioport_interface`
 
@@ -117,7 +117,7 @@ Datastructure used for ioport emulation, containing handlers for the ioport rang
 - `port_out {ioport_out_fn}`: IO out operation handler
 - `desc {const char *}`: IOPort description, useful for debugging
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Struct `ioport_entry`
 
@@ -128,7 +128,7 @@ Datastructure used to present a registered ioport range
 - `range {ioport_range_t}`: IO address range of ioport entry
 - `interface {ioport_interface_t}`: Emulation interface for ioport range
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Struct `vmm_io_list`
 
@@ -140,7 +140,7 @@ Parent datastructure used to maintain a list of registered ioports
 - `List {ioport_entry_t **}`: of registered ioport objects
 - `alloc_addr {uint16_t}`: Base ioport address we can safely bump allocate from, used when registering ioport handlers of type 'IOPORT_FREE'
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 
 Back to [top](#).

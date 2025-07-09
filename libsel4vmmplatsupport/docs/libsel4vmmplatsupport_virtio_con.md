@@ -47,7 +47,7 @@ virtio_con_default_backend for default methods.
 
 - Pointer to an initialised virtio_con_t, NULL if error.
 
-Back to [interface description](#module-virtio_conh).
+Back to [interface description](#interface-virtio_conh).
 
 
 ## Structs
@@ -65,7 +65,7 @@ Virtio Console Driver Interface
 - `emul_driver_funcs {struct console_passthrough}`: Virtio console emulation functions: VMM <-> Guest
 - `ioops {ps_io_ops_t}`: Platform support io ops datastructure
 
-Back to [interface description](#module-virtio_conh).
+Back to [interface description](#interface-virtio_conh).
 
 
 Back to [top](#).

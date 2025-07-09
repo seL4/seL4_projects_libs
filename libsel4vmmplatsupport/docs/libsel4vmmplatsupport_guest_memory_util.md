@@ -46,7 +46,7 @@ Create and map a reservation for a vka allocated frame. The allocated frame is m
 
 - Address of allocated frame in vmm vspace
 
-Back to [interface description](#module-guest_memory_utilh).
+Back to [interface description](#interface-guest_memory_utilh).
 
 ### Function `create_device_reservation_frame(vm, addr, rights, fault_callback, fault_cookie)`
 
@@ -64,7 +64,7 @@ Create and map a reservation for a device frame. The device frame is mapped in b
 
 - Address of device frame in vmm vspace
 
-Back to [interface description](#module-guest_memory_utilh).
+Back to [interface description](#interface-guest_memory_utilh).
 
 ### Function `map_ut_alloc_reservation_with_base_paddr(vm, paddr, reservation)`
 
@@ -80,7 +80,7 @@ Map a guest reservation backed with untyped frames allocated from a base paddr
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memory_utilh).
+Back to [interface description](#interface-guest_memory_utilh).
 
 ### Function `map_ut_alloc_reservation(vm, reservation)`
 
@@ -95,7 +95,7 @@ Map a guest reservation backed with untyped frames
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memory_utilh).
+Back to [interface description](#interface-guest_memory_utilh).
 
 ### Function `map_frame_alloc_reservation(vm, reservation)`
 
@@ -110,7 +110,7 @@ Map a guest reservation backed with free vka frames
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memory_utilh).
+Back to [interface description](#interface-guest_memory_utilh).
 
 ### Function `map_maybe_device_reservation(vm, reservation)`
 
@@ -125,7 +125,7 @@ Map a guest reservation backed with device frames
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memory_utilh).
+Back to [interface description](#interface-guest_memory_utilh).
 
 
 Back to [top](#).

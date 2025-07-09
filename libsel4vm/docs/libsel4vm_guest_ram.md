@@ -53,7 +53,7 @@ Common guest ram touch callback for reading from a guest address into a user sup
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_guest_ram_write_callback(vm, guest_addr, vaddr, size, offset, buf)`
 
@@ -72,7 +72,7 @@ Common guest ram touch callback for writing a user supplied buffer into a guest 
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_touch(vm, addr, size, touch_callback, cookie)`
 
@@ -90,7 +90,7 @@ Touch a series of pages in the guest vm and invoke a callback for each page acce
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_find_largest_free_region(vm, addr, size)`
 
@@ -106,7 +106,7 @@ Find the largest free ram region
 
 - -1 on failure, otherwise 0 for success
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_register(vm, bytes)`
 
@@ -121,7 +121,7 @@ Reserve a region of memory for RAM in the guest VM
 
 - Starting address of registered ram region
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_register_at(vm, start, bytes, untyped)`
 
@@ -138,7 +138,7 @@ Reserve a region of memory for RAM in the guest VM at a starting guest physical 
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_mark_allocated(vm, start, bytes)`
 
@@ -154,7 +154,7 @@ Mark a registered region of RAM as allocated
 
 No return
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_allocate(vm, bytes)`
 
@@ -169,7 +169,7 @@ Allocate a region of registered ram
 
 - Starting address of allocated ram region
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 ### Function `vm_ram_free(vm, start, bytes)`
 
@@ -185,7 +185,7 @@ Free a RAM a previously allocated RAM region
 
 No return
 
-Back to [interface description](#module-guest_ramh).
+Back to [interface description](#interface-guest_ramh).
 
 
 Back to [top](#).

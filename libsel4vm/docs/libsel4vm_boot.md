@@ -41,7 +41,7 @@ Initialise/Create VM
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-booth).
+Back to [interface description](#interface-booth).
 
 ### Function `vm_create_vcpu(vm, priority)`
 
@@ -56,7 +56,7 @@ Create a VCPU for a given VM
 
 - NULL for error, otherwise pointer to created vm_vcpu_t object
 
-Back to [interface description](#module-booth).
+Back to [interface description](#interface-booth).
 
 ### Function `vm_assign_vcpu_target(vcpu, target_cpu)`
 
@@ -71,7 +71,7 @@ Assign a vcpu with logical target cpu to run on
 
 - -1 for error, otherwise 0 for success
 
-Back to [interface description](#module-booth).
+Back to [interface description](#interface-booth).
 
 
 Back to [top](#).

@@ -56,7 +56,7 @@ FTDs usually contain all necessary information about the machine, so`-1` (`0xfff
 
 - 0 on success, otherwise -1 for failure
 
-Back to [interface description](#module-guest_boot_inith).
+Back to [interface description](#interface-guest_boot_inith).
 
 
 Back to [top](#).
