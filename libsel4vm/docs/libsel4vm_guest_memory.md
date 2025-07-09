@@ -20,13 +20,13 @@ The user can then further back the reservation with seL4 frames by performing `v
 
 > [`vm_reserve_memory_at(vm, addr, size, fault_callback, cookie)`](#function-vm_reserve_memory_atvm-addr-size-fault_callback-cookie)
 
-> [`vm_reserve_anon_memory(vm, size, fault_callback, cookie, addr)`](#function-vm_reserve_anon_memoryvm-size-fault_callback-cookie-addr)
+> [`vm_reserve_anon_memory(vm, size, fault_callback, cookie, addr)`](#function-vm_reserve_anon_memoryvm-size-align-fault_callback-cookie-addr)
 
 > [`vm_free_reserved_memory(vm, reservation)`](#function-vm_free_reserved_memoryvm-reservation)
 
 > [`vm_map_reservation(vm, reservation, map_iterator, cookie)`](#function-vm_map_reservationvm-reservation-map_iterator-cookie)
 
-> [`vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`](#function-vm_map_reservationvm-reservation-frames-num_frames-frame_size_bits)
+> [`vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`](#function-vm_map_reservation_framesvm-reservation-frames-num_frames-frame_size_bits)
 
 > [`vm_get_reservation_memory_region(reservation, addr, size)`](#function-vm_get_reservation_memory_regionreservation-addr-size)
 
