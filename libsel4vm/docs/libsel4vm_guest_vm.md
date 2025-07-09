@@ -57,7 +57,7 @@ This funtion is a blocking call, returning on the event of an unhandled VM exit 
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Function `vcpu_start(vcpu)`
 
@@ -71,7 +71,7 @@ Start an initialised vcpu thread
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Function `vm_register_unhandled_mem_fault_callback(vm, fault_handler, cookie)`
 
@@ -87,7 +87,7 @@ Register a callback for processing unhandled memory faults (memory regions not p
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Function `vm_register_notification_callback(vm, notification_callback, cookie)`
 
@@ -103,7 +103,7 @@ Register a callback for processing unhandled notifications (events unknown to li
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 
 ## Structs
@@ -120,7 +120,7 @@ Structure representing individual RAM region. A VM can have multiple regions to 
 - `size {size_t}`: Size of region in bytes
 - `allocated {int}`: Whether or not this region has been 'allocated'
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Struct `vm_mem`
 
@@ -137,7 +137,7 @@ Structure representing VM memory managment
 - `unhandled_mem_fault_handler {unhandled_mem_fault_callback_fn}`: Registered callback for unhandled memory faults
 - `unhandled_mem_fault_cookie {void *}`: User data passed onto unhandled mem fault callback
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Struct `vm_tcb`
 
@@ -149,7 +149,7 @@ Structure used for TCB management within a VCPU
 - `sc {vka_object_t}`: VKA allocated scheduling context
 - `priority {int}`: VCPU scheduling priority
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Struct `vm_vcpu`
 
@@ -165,7 +165,7 @@ Structure used to represent a VCPU
 - `vcpu_online {bool}`: Flag representing if the vcpu has been started
 - `vcpu_arch {struct vm_vcpu_arch}`: Architecture specific vcpu properties
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Struct `vm_run`
 
@@ -177,7 +177,7 @@ VM Runtime management structure
 - `notification_callback {notification_callback_fn}`: Callback for processing unhandled notifications
 - `notification_callback_cookie {void *}`: A cookie to supply to the notification callback
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Struct `vm_cspace`
 
@@ -188,7 +188,7 @@ VM cspace management structure
 - `cspace_obj {vka_object_t}`: VKA allocated cspace object
 - `cspace_root_data {seL4_Word}`: cspace root data capability
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 ### Struct `vm`
 
@@ -210,7 +210,7 @@ Structure representing a VM instance
 - `vm_id {unsigned int}`: Identifier for VM. Useful for debugging
 - `vm_initialised {bool}`: Boolean flagging whether VM is intialised or not
 
-Back to [interface description](#module-guest_vmh).
+Back to [interface description](#interface-guest_vmh).
 
 
 Back to [top](#).

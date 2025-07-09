@@ -65,7 +65,7 @@ Helper write function that just ignores any writes
 
 - Returns 0
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_mem_device_read(cookie, offset, size, result)`
 
@@ -82,7 +82,7 @@ Read method for a PCI devices memory
 
 - 0 if success, -1 if error
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_mem_device_write(cookie, offset, size, value)`
 
@@ -99,7 +99,7 @@ Write method for a PCI devices memory
 
 - 0 if success, -1 if error
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `define_pci_host_bridge(bridge)`
 
@@ -113,7 +113,7 @@ Defines the configuration space values of the PCI host bridge
 
 No return
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_create_passthrough(addr, config)`
 
@@ -129,7 +129,7 @@ you will almost certainly want to rebase io memory
 
 - `vmm_pci_entry_t` for passthrough device
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_create_bar_emulation(existing, num_bars, bars)`
 
@@ -145,7 +145,7 @@ Construct a pci entry that emulates configuration space bar read/write's. The re
 
 - `vmm_pci_entry_t` for emulated bar device
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_create_irq_emulation(existing, irq)`
 
@@ -160,7 +160,7 @@ Construct a pci entry the emulates configuration space interrupt read/write's. T
 
 - `vmm_pci_entry_t` for emulated irq device
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_create_cap_emulation(existing, num_caps, cap, num_ranges, range_starts, range_ends)`
 
@@ -180,7 +180,7 @@ ranges of the capability space that should be directly disallowed. Assumes a typ
 
 - `vmm_pci_entry_t` with an emulated capability space
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 
 ## Structs
@@ -228,7 +228,7 @@ a nice skeleton
 - `caps_len {int}`
 - `caps {void *}`
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `vmm_pci_bar`
 
@@ -240,7 +240,7 @@ Represents a PCI bar within a device
 - `address {uintptr_t}`: Address of PCI bar
 - `size_bits {size_t}`: Size of PCI bar in bits
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `pci_bar_emulation`
 
@@ -255,7 +255,7 @@ the guest OS over-writing elements in the configuration space
 - `bars {vmm_pci_bar_t}`: Set of PCI bars being emulated in the PCI entry
 - `bar_writes {uint32_t}`: Most recent write to each PCI bar in the configuration space. This avoids
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `pci_irq_emulation`
 
@@ -267,7 +267,7 @@ IRQ line accesses in an entries configuration space
 - `passthrough {vmm_pci_entry_t}`: PCI entry being emulated
 - `irq {int}`: IRQ line value in PCI entry
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `pci_passthrough_device`
 
@@ -278,7 +278,7 @@ Datastructure providing direct passthrough access to a pci entry configuration s
 - `addr {vmm_pci_address_t}`: Address of PCI device
 - `config {vmm_pci_config_t}`: Ops for accessing config space
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `pci_cap_emulation`
 
@@ -294,7 +294,7 @@ capabilities in an entries configuration space.
 - `ignore_start {uint8_t *}`: Array of starting indexes of ignored capability ranges
 - `ignore_end {uint8_t *}`: Array of ending idexes of ignored capabilities range
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 
 Back to [top](#).

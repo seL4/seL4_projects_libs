@@ -40,7 +40,7 @@ boot info structure, an e820 map and ACPI tables.
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-guest_boot_inith).
+Back to [interface description](#interface-guest_boot_inith).
 
 ### Function `vmm_plat_init_guest_thread_state(vcpu, guest_entry_addr, guest_boot_info_addr)`
 
@@ -56,7 +56,7 @@ Initialise the booting state of a guest VM, establishing the necessary thread st
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-guest_boot_inith).
+Back to [interface description](#interface-guest_boot_inith).
 
 
 Back to [top](#).

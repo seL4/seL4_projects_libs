@@ -50,7 +50,7 @@ PCI device
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-cross_vm_connectionh).
+Back to [interface description](#interface-cross_vm_connectionh).
 
 ### Function `consume_connection_event(vm, event_id, inject_irq)`
 
@@ -67,7 +67,7 @@ external process. The event is then relayed onto the VM.
 
 No return
 
-Back to [interface description](#module-cross_vm_connectionh).
+Back to [interface description](#interface-cross_vm_connectionh).
 
 
 ## Structs
@@ -84,7 +84,7 @@ Datastructure representing a dataport of a crossvm connection
 - `num_frames {int}`: Total number of frames in the `frames` member
 - `frames {seL4_CPtr *}`: The set of frames backing the dataport
 
-Back to [interface description](#module-cross_vm_connectionh).
+Back to [interface description](#interface-cross_vm_connectionh).
 
 ### Struct `crossvm_handle`
 
@@ -97,7 +97,7 @@ This is matched on when invoking `consume_connection_event`
 - `emit_fn {emit_fn}`: The function pointer to the crossvm emit method
 - `consume_id {seL4_Word}`: The identifier used for the crossvm connection when receiving incoming notifications
 
-Back to [interface description](#module-cross_vm_connectionh).
+Back to [interface description](#interface-cross_vm_connectionh).
 
 
 Back to [top](#).

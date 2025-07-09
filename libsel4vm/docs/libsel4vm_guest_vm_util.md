@@ -43,7 +43,7 @@ Get the TCB CPtr a given VCPU is associated with
 
 - seL4_CPtr of TCB object
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 ### Function `vm_get_vcpu(vm, vcpu_id)`
 
@@ -58,7 +58,7 @@ Get the VCPU CPtr associatated with a given logical ID
 
 - seL4_CapNull if no vcpu exists, otherwise the seL4_CPtr of the VCPU object
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 ### Function `vm_vcpu_for_target_cpu(vm, target_cpu)`
 
@@ -73,7 +73,7 @@ Get the VCPU object that is assigned to a given target core ID
 
 - NULL if no vcpu is assigned to the target core, otherwise the vm_vcpu_t object
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 ### Function `vm_find_free_unassigned_vcpu(vm)`
 
@@ -87,7 +87,7 @@ Find a VCPU object that hasn't been assigned to a target core
 
 - NULL if no vcpu can be found, otherwise the vm_vcpu_t object
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 ### Function `is_vcpu_online(vcpu)`
 
@@ -101,7 +101,7 @@ Find if a given VCPU is online
 
 - True if the vcpu is online, otherwise False
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 ### Function `vm_get_vspace(vm)`
 
@@ -115,7 +115,7 @@ Get the vspace of a given VM instance
 
 - A vspace_t object
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 ### Function `vm_get_vmm_vspace(vm)`
 
@@ -129,7 +129,7 @@ Get the vspace of the host VMM associated with a given VM instance
 
 - A vspace_t object
 
-Back to [interface description](#module-guest_vm_utilh).
+Back to [interface description](#interface-guest_vm_utilh).
 
 
 Back to [top](#).

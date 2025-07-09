@@ -44,7 +44,7 @@ Set a VCPU's thread registers given a TCB user context
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_arm_contexth).
+Back to [interface description](#interface-guest_arm_contexth).
 
 ### Function `vm_set_thread_context_reg(vcpu, reg, value)`
 
@@ -60,7 +60,7 @@ Set a single VCPU's TCB register
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_arm_contexth).
+Back to [interface description](#interface-guest_arm_contexth).
 
 ### Function `vm_get_thread_context(vcpu, context)`
 
@@ -75,7 +75,7 @@ Get a VCPU's TCB user context
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_arm_contexth).
+Back to [interface description](#interface-guest_arm_contexth).
 
 ### Function `vm_get_thread_context_reg(vcpu, reg, value)`
 
@@ -91,7 +91,7 @@ Get a single VCPU's TCB register
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_arm_contexth).
+Back to [interface description](#interface-guest_arm_contexth).
 
 ### Function `vm_set_arm_vcpu_reg(vcpu, reg, value)`
 
@@ -107,7 +107,7 @@ Set an ARM VCPU register
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_arm_contexth).
+Back to [interface description](#interface-guest_arm_contexth).
 
 ### Function `vm_get_arm_vcpu_reg(vcpu, reg, value)`
 
@@ -123,7 +123,7 @@ Get an ARM VCPU register
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_arm_contexth).
+Back to [interface description](#interface-guest_arm_contexth).
 
 
 Back to [top](#).

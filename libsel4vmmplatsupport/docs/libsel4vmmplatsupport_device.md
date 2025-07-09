@@ -43,7 +43,7 @@ Initialise an empty device list
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-deviceh).
+Back to [interface description](#interface-deviceh).
 
 ### Function `add_device(dev_list, d)`
 
@@ -58,7 +58,7 @@ Add a generic device to a given device list without performing any initialisatio
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-deviceh).
+Back to [interface description](#interface-deviceh).
 
 ### Function `find_device_by_pa(dev_list, addr)`
 
@@ -73,7 +73,7 @@ Find a device by a given addr within a device list
 
 - Pointer to device if found, otherwise NULL if not found
 
-Back to [interface description](#module-deviceh).
+Back to [interface description](#interface-deviceh).
 
 
 ## Structs
@@ -93,7 +93,7 @@ Device Management Object
 - `handle_device_fault {int *(vm_t, vm_vcpu_t, dev, addr, len)}`: Fault handler
 - `priv {void *}`: Device emulation private data
 
-Back to [interface description](#module-deviceh).
+Back to [interface description](#interface-deviceh).
 
 ### Struct `device_list`
 
@@ -104,7 +104,7 @@ Management for a list of devices
 - `devices {struct device *}`: List of registered devices
 - `num_devices {int}`: Total number of registered devices
 
-Back to [interface description](#module-deviceh).
+Back to [interface description](#interface-deviceh).
 
 
 Back to [top](#).

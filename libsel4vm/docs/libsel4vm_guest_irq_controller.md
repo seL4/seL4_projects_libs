@@ -39,7 +39,7 @@ Inject an IRQ into a VM's interrupt controller
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_irq_controllerh).
+Back to [interface description](#interface-guest_irq_controllerh).
 
 ### Function `vm_set_irq_level(vcpu, irq, irq_level)`
 
@@ -55,7 +55,7 @@ Set level of IRQ number into a VM's interrupt controller
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_irq_controllerh).
+Back to [interface description](#interface-guest_irq_controllerh).
 
 ### Function `vm_register_irq(vcpu, irq, ack_fn, cookie)`
 
@@ -72,7 +72,7 @@ Register irq with an acknowledgment function
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_irq_controllerh).
+Back to [interface description](#interface-guest_irq_controllerh).
 
 ### Function `vm_create_default_irq_controller(vm)`
 
@@ -86,7 +86,7 @@ Install the default interrupt controller into the VM
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_irq_controllerh).
+Back to [interface description](#interface-guest_irq_controllerh).
 
 
 Back to [top](#).

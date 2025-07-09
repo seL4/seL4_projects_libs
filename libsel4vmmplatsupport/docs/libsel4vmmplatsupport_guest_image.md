@@ -46,7 +46,7 @@ Load guest kernel image
 
 - 0 on success, otherwise -1 on error
 
-Back to [interface description](#module-guest_imageh).
+Back to [interface description](#interface-guest_imageh).
 
 ### Function `vm_load_guest_module(vm, module_name, load_address, alignment, guest_image)`
 
@@ -64,7 +64,7 @@ Load guest kernel module e.g. initrd
 
 - 0 on success, otherwise -1 on error
 
-Back to [interface description](#module-guest_imageh).
+Back to [interface description](#interface-guest_imageh).
 
 
 ## Structs
@@ -81,7 +81,7 @@ General datastructure for managing a guest image
 - `alignment {size_t}`: Alignment we used when loading the image
 - `size {size_t}`: Size of guest image
 
-Back to [interface description](#module-guest_imageh).
+Back to [interface description](#interface-guest_imageh).
 
 ### Struct `guest_kernel_image`
 
@@ -92,7 +92,7 @@ Stores information about the guest kernel image we are loading.
 - `kernel_image {guest_image_t}`: Datastructure referring to guest kernel image
 - `kernel_image_arch {guest_kernel_image_arch_t}`: Architecture specific information for loaded guest image
 
-Back to [interface description](#module-guest_imageh).
+Back to [interface description](#interface-guest_imageh).
 
 
 Back to [top](#).

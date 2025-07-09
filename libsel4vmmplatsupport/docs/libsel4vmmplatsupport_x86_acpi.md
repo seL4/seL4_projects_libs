@@ -32,7 +32,7 @@ Creates ACPI table for the guest VM
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-acpih).
+Back to [interface description](#interface-acpih).
 
 
 Back to [top](#).

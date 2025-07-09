@@ -40,7 +40,7 @@ Calls made to this hcd may be redirected for filtering.
 
 - A handle to the virtual usb device, or NULL on failure
 
-Back to [interface description](#module-vusbh).
+Back to [interface description](#interface-vusbh).
 
 ### Function `vm_vusb_notify(vusb)`
 
@@ -57,7 +57,7 @@ vm_install_vusb function.
 
 No return
 
-Back to [interface description](#module-vusbh).
+Back to [interface description](#interface-vusbh).
 
 
 Back to [top](#).

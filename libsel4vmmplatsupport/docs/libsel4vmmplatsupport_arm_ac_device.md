@@ -47,7 +47,7 @@ guest access.
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-ac_deviceh).
+Back to [interface description](#interface-ac_deviceh).
 
 
 Back to [top](#).

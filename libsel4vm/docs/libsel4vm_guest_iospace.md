@@ -34,7 +34,7 @@ Attach an additional IO space to the given VM
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_iospaceh).
+Back to [interface description](#interface-guest_iospaceh).
 
 
 Back to [top](#).

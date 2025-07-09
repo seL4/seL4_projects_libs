@@ -40,7 +40,7 @@ Register a callback for processing unhandled vcpu faults
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-guest_vm_archh).
+Back to [interface description](#interface-guest_vm_archh).
 
 
 ## Structs
@@ -57,7 +57,7 @@ Structure representing ARM specific vcpu properties
 - `unhandled_vcpu_callback {unhandled_vcpu_fault_callback_fn}`: A callback for processing unhandled vcpu faults
 - `unhandled_vcpu_callback_cookie {void *}`: A cookie to supply to the vcpu fault handler
 
-Back to [interface description](#module-guest_vm_archh).
+Back to [interface description](#interface-guest_vm_archh).
 
 
 Back to [top](#).
