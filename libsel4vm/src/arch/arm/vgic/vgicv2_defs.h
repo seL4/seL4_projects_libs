@@ -68,3 +68,13 @@
 #define GIC_DIST_SGI_CPU_TARGET_LIST_MASK       0xFF << GIC_DIST_SGI_CPU_TARGET_LIST_SHIFT
 
 #define GIC_DIST_SGI_INTID_MASK                 0xF
+
+/*
+ * https://elixir.bootlin.com/linux/v3.8/source/Documentation/devicetree/bindings/arm/gic.txt
+ *
+ * Contants for getting registers from FDT */
+#define NUM_GIC_REGS        4
+#define GIC_DIST_ENTRY      0
+#define GIC_CPU_ENTRY       1
+#define GIC_VCPU_CNTR_ENTRY 2
+#define GIC_VCPU_ENTRY      3
