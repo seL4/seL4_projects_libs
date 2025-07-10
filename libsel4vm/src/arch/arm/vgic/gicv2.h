@@ -96,3 +96,27 @@ struct gic_dist_map {
     uint32_t periph_id[12];                             /* [0xFC0, 0xFF0) */
     uint32_t component_id[4];                           /* [0xFF0, 0xFFF] */
 };
+
+static inline bool gic_dist_is_enabled(vgic_t *vgic)
+{
+    return (0 != vgic->dist->enable);
+}
+
+static inline void vgic_dist_set_ctlr(vgic_t *vgic, uint32_t data)
+{
+    /* ToDo: we should care about bit 0 only and ignore all the others. */
+
+    switch (data) {
+    case 0:
+        DDIST("disabling gic distributor\n");
+        vgic->dist->enable = 0;
+        break;
+    case 1:
+        DDIST("enabling gic distributor\n");
+        vgic->dist->enable = 1;
+        break;
+    default:
+        ZF_LOGE("Unknown dist ctlr encoding 0x%x", data);
+        break;
+    }
+}
