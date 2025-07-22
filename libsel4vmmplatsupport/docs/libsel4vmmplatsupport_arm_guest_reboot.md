@@ -44,7 +44,7 @@ Initialise state of a given reboot hooks list
 
 - 0 for success, otherwise -1 for error
 
-Back to [interface description](#module-guest_rebooth).
+Back to [interface description](#interface-guest_rebooth).
 
 ### Function `vmm_register_reboot_callback(rb_hooks_list, hook, token)`
 
@@ -60,7 +60,7 @@ Register a reboot callback within a given reboot hooks list
 
 - 0 for success, otherwise -1 for error
 
-Back to [interface description](#module-guest_rebooth).
+Back to [interface description](#interface-guest_rebooth).
 
 ### Function `vmm_process_reboot_callbacks(vm, rb_hooks_list)`
 
@@ -75,7 +75,7 @@ Process the reboot hooks registered in a reboot hooks list
 
 - 0 for success, otherwise -1 for error
 
-Back to [interface description](#module-guest_rebooth).
+Back to [interface description](#interface-guest_rebooth).
 
 
 ## Structs
@@ -92,7 +92,7 @@ hook
 - `fn {reboot_hook_fn}`: Function pointer to reboot callback
 - `token {void *}`: Cookie passed to reboot callback when invoked
 
-Back to [interface description](#module-guest_rebooth).
+Back to [interface description](#interface-guest_rebooth).
 
 ### Struct `reboot_hooks_list`
 
@@ -103,7 +103,7 @@ Reboot hooks management datastructure. Contains a list of reboot hooks that a VM
 - `rb_hooks {reboot_hook_t *}`: List of reboot hooks
 - `nhooks {size_t}`: Number of reboot hooks in `rb_hooks` member
 
-Back to [interface description](#module-guest_rebooth).
+Back to [interface description](#interface-guest_rebooth).
 
 
 Back to [top](#).

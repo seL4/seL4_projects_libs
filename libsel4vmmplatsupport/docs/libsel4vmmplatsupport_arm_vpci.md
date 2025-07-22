@@ -38,7 +38,7 @@ The interface `vpci.h` defines the following functions.
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-vpcih).
+Back to [interface description](#interface-vpcih).
 
 ### Function `fdt_generate_vpci_node(vm, pci, fdt, gic_phandle)`
 
@@ -56,7 +56,7 @@ the virtual PCI device configuration space.
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-vpcih).
+Back to [interface description](#interface-vpcih).
 
 
 Back to [top](#).

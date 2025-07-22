@@ -38,7 +38,7 @@ Add an io port range for emulation
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Function `vm_register_unhandled_ioport_callback(vm, ioport_callback, cookie)`
 
@@ -54,7 +54,7 @@ Register a callback for processing unhandled ioport faults (faults unknown to li
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 ### Function `vm_enable_passthrough_ioport(vcpu, port_start, port_end)`
 
@@ -70,7 +70,7 @@ Enable the passing-through of specific ioport ranges to the VM
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-ioportsh).
+Back to [interface description](#interface-ioportsh).
 
 
 Back to [top](#).

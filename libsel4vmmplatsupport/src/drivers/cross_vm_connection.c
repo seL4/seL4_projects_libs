@@ -30,7 +30,7 @@
 #define EVENT_BAR_CONSUME_EVENT_REGISTER 0x4
 #define EVENT_BAR_CONSUME_EVENT_REGISTER_INDEX 1
 #define EVENT_BAR_DEVICE_NAME_REGISTER 0x8
-#define EVENT_BAR_DEVICE_NAME_MAX_LEN 50
+#define EVENT_BAR_DEVICE_NAME_MAX_LEN 48
 
 struct connection_info {
     uintptr_t event_address;
@@ -248,9 +248,13 @@ static int initialise_connections(vm_t *vm, uintptr_t connection_base_addr, cros
         if (connections[i].connection_name == NULL) {
             connections[i].connection_name = "connector";
         }
-        strncpy(info[i].event_registers + EVENT_BAR_DEVICE_NAME_REGISTER, connections[i].connection_name,
+        // Copy the string via a stack buffer to force aligned writes to uncached mem on
+        // the final buffer.
+        char buff[EVENT_BAR_DEVICE_NAME_MAX_LEN] = {};
+        strncpy(buff, connections[i].connection_name,
                 EVENT_BAR_DEVICE_NAME_MAX_LEN);
-
+        memcpy(info[i].event_registers + EVENT_BAR_DEVICE_NAME_REGISTER, buff,
+               EVENT_BAR_DEVICE_NAME_MAX_LEN);
         connection_curr_addr += dataport_size;
     }
     return 0;

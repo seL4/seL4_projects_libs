@@ -33,7 +33,7 @@ the vcpus created for the VM.
 
 - 0 for success, -1 for error
 
-Back to [interface description](#module-guest_vcpu_utilh).
+Back to [interface description](#interface-guest_vcpu_utilh).
 
 
 Back to [top](#).

@@ -20,13 +20,13 @@ The user can then further back the reservation with seL4 frames by performing `v
 
 > [`vm_reserve_memory_at(vm, addr, size, fault_callback, cookie)`](#function-vm_reserve_memory_atvm-addr-size-fault_callback-cookie)
 
-> [`vm_reserve_anon_memory(vm, size, fault_callback, cookie, addr)`](#function-vm_reserve_anon_memoryvm-size-fault_callback-cookie-addr)
+> [`vm_reserve_anon_memory(vm, size, fault_callback, cookie, addr)`](#function-vm_reserve_anon_memoryvm-size-align-fault_callback-cookie-addr)
 
 > [`vm_free_reserved_memory(vm, reservation)`](#function-vm_free_reserved_memoryvm-reservation)
 
 > [`vm_map_reservation(vm, reservation, map_iterator, cookie)`](#function-vm_map_reservationvm-reservation-map_iterator-cookie)
 
-> [`vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`](#function-vm_map_reservationvm-reservation-frames-num_frames-frame_size_bits)
+> [`vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`](#function-vm_map_reservation_framesvm-reservation-frames-num_frames-frame_size_bits)
 
 > [`vm_get_reservation_memory_region(reservation, addr, size)`](#function-vm_get_reservation_memory_regionreservation-addr-size)
 
@@ -59,7 +59,7 @@ Reserve a region of the VM's memory at a given base address
 
 - NULL on failure otherwise a pointer to a reservation object representing the reserved region
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 ### Function `vm_reserve_anon_memory(vm, size, align, fault_callback, cookie, addr)`
 
@@ -79,7 +79,7 @@ through the `vm_memory_make_anon` function.
 
 - NULL on failure otherwise a pointer to a reservation object representing the reserved region
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 ### Function `vm_free_reserved_memory(vm, reservation)`
 
@@ -94,7 +94,7 @@ Free memory reservation from the VM
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 ### Function `vm_map_reservation(vm, reservation, map_iterator, cookie)`
 
@@ -111,7 +111,7 @@ Map a reservation into the VM's virtual address space
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 ### Function `vm_map_reservation_frames(vm, reservation, frames, num_frames, frame_size_bits)`
 
@@ -129,7 +129,7 @@ Map a reservation into the VM's virtual address space from given frames
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 ### Function `vm_get_reservation_memory_region(reservation, addr, size)`
 
@@ -145,7 +145,7 @@ Get the memory region information (address & size) from a given reservation
 
 No return
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 ### Function `vm_memory_init(vm)`
 
@@ -159,7 +159,7 @@ Initialise a VM's memory management interface
 
 - -1 on failure otherwise 0 for success
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 
 ## Structs
@@ -177,7 +177,7 @@ Structure representing a mappable memory frame
 - `vaddr {uintptr_t}`: Virtual address of which to map the frame into
 - `size_bits {size_t}`: Size of frame in bits
 
-Back to [interface description](#module-guest_memoryh).
+Back to [interface description](#interface-guest_memoryh).
 
 
 Back to [top](#).

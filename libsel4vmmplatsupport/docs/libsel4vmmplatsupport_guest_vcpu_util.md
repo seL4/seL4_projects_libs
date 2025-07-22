@@ -33,7 +33,7 @@ further intialises and configures the vcpu with platform specific attributes
 
 - NULL for error, otherwise pointer to created vm_vcpu_t object
 
-Back to [interface description](#module-guest_vcpu_utilh).
+Back to [interface description](#interface-guest_vcpu_utilh).
 
 
 Back to [top](#).

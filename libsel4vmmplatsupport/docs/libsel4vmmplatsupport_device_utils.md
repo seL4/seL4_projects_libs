@@ -37,7 +37,7 @@ Install a passthrough device into a VM
 
 - 0 on success, -1 for error
 
-Back to [interface description](#module-device_utilsh).
+Back to [interface description](#interface-device_utilsh).
 
 ### Function `vm_install_ram_only_device(vm, device)`
 
@@ -52,7 +52,7 @@ Install a device backed by ram into a VM
 
 - 0 on success, -1 for error
 
-Back to [interface description](#module-device_utilsh).
+Back to [interface description](#interface-device_utilsh).
 
 ### Function `vm_install_listening_device(vm, device)`
 
@@ -67,7 +67,7 @@ Install a passthrough device into a VM, but trap and print all access
 
 - 0 on success, -1 for error
 
-Back to [interface description](#module-device_utilsh).
+Back to [interface description](#interface-device_utilsh).
 
 
 Back to [top](#).

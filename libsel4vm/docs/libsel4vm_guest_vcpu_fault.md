@@ -51,7 +51,7 @@ Get current fault address of vcpu
 
 - Current fault address of vcpu
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `get_vcpu_fault_ip(vcpu)`
 
@@ -65,7 +65,7 @@ Get instruction pointer of current vcpu fault
 
 - Intruction pointer of vcpu fault
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `get_vcpu_fault_data(vcpu)`
 
@@ -79,7 +79,7 @@ Get the data of the current vcpu fault
 
 - Data of vcpu fault
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `get_vcpu_fault_data_mask(vcpu)`
 
@@ -93,7 +93,7 @@ Get data mask of the current vcpu fault
 
 - Data mask of vcpu fault
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `get_vcpu_fault_size(vcpu)`
 
@@ -107,7 +107,7 @@ Get access size of the current vcpu fault
 
 - Access size of vcpu fault
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `is_vcpu_read_fault(vcpu)`
 
@@ -121,7 +121,7 @@ Is current vcpu fault a read fault
 
 - True if read fault, False if write fault
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `set_vcpu_fault_data(vcpu, data)`
 
@@ -136,7 +136,7 @@ Set the data of the current vcpu fault
 
 - 0 for success, otherwise -1 for error
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `emulate_vcpu_fault(vcpu, data)`
 
@@ -151,7 +151,7 @@ Emulate a read or write fault on a given data value
 
 - Emulation result of vcpu fault over given data value
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `advance_vcpu_fault(vcpu)`
 
@@ -165,7 +165,7 @@ Advance the current vcpu fault to the next stage/instruction
 
 No return
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 ### Function `restart_vcpu_fault(vcpu)`
 
@@ -179,7 +179,7 @@ Restart the current vcpu fault
 
 No return
 
-Back to [interface description](#module-guest_vcpu_faulth).
+Back to [interface description](#interface-guest_vcpu_faulth).
 
 
 Back to [top](#).

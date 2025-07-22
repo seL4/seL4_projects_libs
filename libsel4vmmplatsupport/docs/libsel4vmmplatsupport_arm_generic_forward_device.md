@@ -43,7 +43,7 @@ Install the virtual forwarding device into a VM instance
 
 - -1 for error, otherwise 0 for success
 
-Back to [interface description](#module-generic_forward_deviceh).
+Back to [interface description](#interface-generic_forward_deviceh).
 
 
 ## Structs
@@ -59,7 +59,7 @@ Interface for forwarding read and write faults
 - `write_fn {forward_write_fn}`: A callback for forwarding write faults
 - `read_fn {forward_read_fn}`: A callback for forwarding read faults
 
-Back to [interface description](#module-generic_forward_deviceh).
+Back to [interface description](#interface-generic_forward_deviceh).
 
 
 Back to [top](#).

@@ -48,7 +48,7 @@ Initialize PCI space
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `vmm_pci_add_entry(space, entry, addr)`
 
@@ -64,7 +64,7 @@ Add a PCI entry. Optionally reports where it is located
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `make_addr_reg_from_config(conf, addr, reg)`
 
@@ -80,7 +80,7 @@ Convert config to pci address
 
 No return
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Function `find_device(self, addr)`
 
@@ -95,7 +95,7 @@ Find PCI device given a PCI address (Bus/Dev/Func)
 
 - NULL on error, otherwise pointer to registered pci entry
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 
 ## Structs
@@ -112,7 +112,7 @@ Represents a PCI address by Bus/Device/Function
 - `dev {uint8_t}`: Device value
 - `fun {uint8_t}`: Function value
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `vmm_pci_entry`
 
@@ -124,7 +124,7 @@ Abstracts the virtual PCI device. This is is inserted into the virtual PCI confi
 - `ioread {int *(void *cookie, int offset, int size, uint32_t *result)}`: Configuration space read callback
 - `iowrite {int *(void *cookie, int offset, int size, uint32_t value)}`: Configuration space write callback
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 ### Struct `vmm_pci_sapce`
 
@@ -136,7 +136,7 @@ Represents a single host virtual PCI space
 - `bus {vmm_pci_entry_t *}`: The PCI bus, representing 32 devices, each of which has 8 functions
 - `conf_port_addr {uint32_t}`: The current config address for IO port emulation
 
-Back to [interface description](#module-pcih).
+Back to [interface description](#interface-pcih).
 
 
 Back to [top](#).

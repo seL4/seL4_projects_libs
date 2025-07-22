@@ -50,7 +50,7 @@ virtio_net_default_backend for default methods.
 
 - Pointer to an initialised virtio_net_t, NULL if error.
 
-Back to [interface description](#module-virtio_neth).
+Back to [interface description](#interface-virtio_neth).
 
 ### Function `virtio_net_default_backend()`
 
@@ -64,7 +64,7 @@ No parameters
 
 - A struct with a default virtio_net backend. It is the responsibility of the caller to
 
-Back to [interface description](#module-virtio_neth).
+Back to [interface description](#interface-virtio_neth).
 
 
 ## Structs
@@ -83,7 +83,7 @@ Virtio Net Driver Interface
 - `emul_driver_funcs {struct raw_iface_funcs}`: Virtio Ethernet emulation functions: VMM <-> Guest
 - `ioops {ps_io_ops_t}`: Platform support ioops for dma management
 
-Back to [interface description](#module-virtio_neth).
+Back to [interface description](#interface-virtio_neth).
 
 
 Back to [top](#).

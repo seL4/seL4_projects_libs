@@ -36,7 +36,7 @@ This being matched with the value found in the vcpu EAX register on a vmcall exc
 
 - 0 on success, -1 on error
 
-Back to [interface description](#module-vmcallh).
+Back to [interface description](#interface-vmcallh).
 
 
 Back to [top](#).

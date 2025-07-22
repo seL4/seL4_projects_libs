@@ -44,7 +44,7 @@ Set a VCPU's thread registers given a seL4_VCPUContext
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_x86_contexth).
+Back to [interface description](#interface-guest_x86_contexth).
 
 ### Function `vm_set_thread_context_reg(vcpu, reg, value)`
 
@@ -60,7 +60,7 @@ Set a single VCPU's thread register in a seL4_VCPUContext
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_x86_contexth).
+Back to [interface description](#interface-guest_x86_contexth).
 
 ### Function `vm_get_thread_context(vcpu, context)`
 
@@ -75,7 +75,7 @@ Get a VCPU's thread context
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_x86_contexth).
+Back to [interface description](#interface-guest_x86_contexth).
 
 ### Function `vm_get_thread_context_reg(vcpu, reg, value)`
 
@@ -91,7 +91,7 @@ Get a single VCPU's thread register
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_x86_contexth).
+Back to [interface description](#interface-guest_x86_contexth).
 
 ### Function `vm_set_vmcs_field(vcpu, field, value)`
 
@@ -107,7 +107,7 @@ Set a VMCS field
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_x86_contexth).
+Back to [interface description](#interface-guest_x86_contexth).
 
 ### Function `vm_get_vmcs_field(vcpu, field, value)`
 
@@ -123,7 +123,7 @@ Get a VMCS register
 
 - 0 on success, otherwise -1 for error
 
-Back to [interface description](#module-guest_x86_contexth).
+Back to [interface description](#interface-guest_x86_contexth).
 
 
 Back to [top](#).
