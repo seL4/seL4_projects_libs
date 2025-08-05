@@ -65,7 +65,9 @@ static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d
 {
     assert(d);
     assert(d->vgic);
-    return d->vgic->dist;
+
+    vgic_t *vgic = d->vgic;
+    return priv_get_dist(vgic->registers);
 }
 
 
@@ -103,8 +105,8 @@ static void vgic_dist_reset(struct vgic_dist_device *d)
     struct gic_dist_map *gic_dist;
     gic_dist = vgic_priv_get_dist(d);
     memset(gic_dist, 0, sizeof(*gic_dist));
-    gic_dist->ic_type         = 0x0000fce7; /* RO */
-    gic_dist->dist_ident      = 0x0200043b; /* RO */
+    gic_dist->typer           = 0x0000fce7; /* RO */
+    gic_dist->iidr            = 0x0200043b; /* RO */
 
     for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
         gic_dist->enable_set0[i]   = 0x0000ffff; /* 16bit RO */
@@ -252,9 +254,9 @@ int vm_install_vgic(vm_t *vm)
     }
     memcpy(vgic_dist, &dev_vgic_dist, sizeof(struct vgic_dist_device));
 
-    vgic->dist = calloc(1, sizeof(struct gic_dist_map));
-    assert(vgic->dist);
-    if (vgic->dist == NULL) {
+    vgic->registers = calloc(1, sizeof(struct gic_dist_map));
+    assert(vgic->registers);
+    if (vgic->registers == NULL) {
         return -1;
     }
     vm_memory_reservation_t *vgic_dist_res = vm_reserve_memory_at(vm, GIC_DIST_PADDR, PAGE_SIZE_4K,
