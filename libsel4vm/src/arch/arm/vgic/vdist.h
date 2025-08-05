@@ -144,24 +144,6 @@ static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id
     return is_spi_active(gic_dist, irq);
 }
 
-static int vgic_dist_enable(vgic_t *vgic, vm_t *vm)
-{
-    assert(vgic);
-    assert(vgic->dist);
-    DDIST("enabling gic distributor\n");
-    vgic->dist->enable = 1;
-    return 0;
-}
-
-static int vgic_dist_disable(vgic_t *vgic, vm_t *vm)
-{
-    assert(vgic);
-    assert(vgic->dist);
-    DDIST("disabling gic distributor\n");
-    vgic->dist->enable = 0;
-    return 0;
-}
-
 static void vgic_dist_enable_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 {
     assert(vgic);
@@ -207,7 +189,7 @@ static int vgic_dist_set_pending_irq(vgic_t *vgic, vm_vcpu_t *vcpu, int irq)
 
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu, irq);
 
-    if (!virq_data || !vgic->dist->enable || !is_enabled(vgic->dist, irq, vcpu->vcpu_id)) {
+    if (!virq_data || !gic_dist_is_enabled(vgic) || !is_enabled(vgic->dist, irq, vcpu->vcpu_id)) {
         DDIST("IRQ not enabled (%d) on vcpu %d\n", irq, vcpu->vcpu_id);
         return -1;
     }
@@ -424,14 +406,7 @@ static memory_fault_result_t vgic_dist_reg_write(vm_t *vm, vm_vcpu_t *vcpu,
     uint32_t data;
     switch (offset) {
     case RANGE32(GIC_DIST_CTLR, GIC_DIST_CTLR):
-        data = fault_get_data(fault);
-        if (data == 1) {
-            vgic_dist_enable(vgic, vm);
-        } else if (data == 0) {
-            vgic_dist_disable(vgic, vm);
-        } else {
-            ZF_LOGE("Unknown enable register encoding");
-        }
+        vgic_dist_set_ctlr(vgic, fault_get_data(fault));
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
         break;
