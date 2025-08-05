@@ -91,7 +91,8 @@ static void pci_cfg_write_fault(vm_vcpu_t *vcpu, uint8_t offset, size_t len, vmm
     uint32_t value;
     int err;
 
-    mask = get_vcpu_fault_data_mask(vcpu);
+    seL4_Word s = (get_vcpu_fault_address(vcpu) & 0x3) * 8;
+    mask = get_vcpu_fault_data_mask(vcpu) >> s;
     value = get_vcpu_fault_data(vcpu) & mask;
 
     err = dev->iowrite((void *)dev->cookie, offset, len, value);
