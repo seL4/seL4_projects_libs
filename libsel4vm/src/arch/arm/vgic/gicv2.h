@@ -10,41 +10,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-
-/* FIXME these should be defined in a way that is friendlier to extension. */
-#if defined(CONFIG_PLAT_EXYNOS5)
-#define GIC_PADDR   0x10480000
-#elif defined(CONFIG_PLAT_TK1) || defined(CONFIG_PLAT_TX1)
-#define GIC_PADDR   0x50040000
-#elif defined(CONFIG_PLAT_TX2)
-#define GIC_PADDR   0x03880000
-#elif defined(CONFIG_PLAT_QEMU_ARM_VIRT)
-#define GIC_PADDR   0x8000000
-#elif defined(CONFIG_PLAT_ODROIDC2)
-#define GIC_PADDR   0xc4300000
-#elif defined(CONFIG_PLAT_ZYNQMP)
-#define GIC_PADDR   0xf9000000
-#else
-#error "Unsupported platform for GIC"
-#endif
-
-#ifdef CONFIG_PLAT_QEMU_ARM_VIRT
-#define GIC_DIST_PADDR       (GIC_PADDR)
-#define GIC_CPU_PADDR        (GIC_PADDR + 0x00010000)
-#define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x00030000)
-#define GIC_VCPU_PADDR       (GIC_PADDR + 0x00040000)
-#elif defined(CONFIG_PLAT_ZYNQMP)
-#define GIC_DIST_PADDR       (GIC_PADDR + 0x10000)
-#define GIC_CPU_PADDR        (GIC_PADDR + 0x20000)
-#define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x40000)
-#define GIC_VCPU_PADDR       (GIC_PADDR + 0x60000)
-#else
-#define GIC_DIST_PADDR       (GIC_PADDR + 0x1000)
-#define GIC_CPU_PADDR        (GIC_PADDR + 0x2000)
-#define GIC_VCPU_CNTR_PADDR  (GIC_PADDR + 0x4000)
-#define GIC_VCPU_PADDR       (GIC_PADDR + 0x6000)
-#endif
-
 /* Memory map for GIC distributor */
 struct gic_dist_map {
     uint32_t enable;                                    /* 0x000 */

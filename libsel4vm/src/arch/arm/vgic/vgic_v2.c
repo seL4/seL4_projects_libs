@@ -58,8 +58,69 @@
 #include "gicv2.h"
 #include "vdist.h"
 
+#include <libfdt.h>
 
+static uintptr_t vcpu_addr;
+static uintptr_t cpu_addr;
+static uintptr_t dist_addr;
 static struct vgic_dist_device *vgic_dist;
+
+static int gic_get_registers_from_fdt(vm_t *vm, uintptr_t *dist, uintptr_t *cpu, uintptr_t *vcpu)
+{
+    const struct fdt_property *c;
+    int len;
+
+    int gic_offset = fdt_path_offset(vm->fdt_ori, vm->gic_path);
+    if (0 > gic_offset) {
+        ZF_LOGE("Failed to find gic offset from path: %s", vm->gic_path);
+        return -1;
+    }
+
+    int parent_offset = fdt_parent_offset(vm->fdt_ori, gic_offset);
+    if (0 > parent_offset) {
+        ZF_LOGE("Failed to find gic parent offset");
+        return -1;
+    }
+
+    int address_cells = fdt_address_cells(vm->fdt_ori, parent_offset);
+    int size_cells = fdt_address_cells(vm->fdt_ori, parent_offset);
+
+    if ((address_cells == 0) || (size_cells == 0)) {
+        ZF_LOGE("#address-cells or #size-cells are 0");
+        return -1;
+    }
+
+    c = fdt_get_property(vm->fdt_ori, gic_offset, "reg", &len);
+    if (!c) {
+        ZF_LOGE("Failed to find reg in gic node");
+        return -1;
+    }
+
+    /*
+     * 1st reg entry: Distributor
+     * 2nd reg entry: CPU Interface
+     * 3rd reg entry: GIC Virtual Interface Control Register
+     * 4th reg entry: GIC Virtual CPU Interface Register
+     */
+    uint64_t gic_regs[NUM_GIC_REGS];
+    int calculated_size = size_cells * address_cells * NUM_GIC_REGS * sizeof(uint32_t);
+    int reg_offset = calculated_size / NUM_GIC_REGS;
+
+    if (len != calculated_size) {
+        ZF_LOGE("Register size is unexpected. %d != %d", len, calculated_size);
+        return -1;
+    }
+
+    for (int i = 0; i < NUM_GIC_REGS; i++) {
+        memcpy(&gic_regs[i], (void *)(c->data + (i * reg_offset)), sizeof(uint32_t) * address_cells);
+    }
+
+    *dist = fdt64_to_cpu(gic_regs[GIC_DIST_ENTRY]);
+    *cpu = fdt64_to_cpu(gic_regs[GIC_CPU_ENTRY]);
+    *vcpu = fdt64_to_cpu(gic_regs[GIC_VCPU_ENTRY]);
+
+    return 0;
+}
 
 static inline struct gic_dist_map *vgic_priv_get_dist(struct vgic_dist_device *d)
 {
@@ -215,9 +276,9 @@ static vm_frame_t vgic_vcpu_iterator(uintptr_t addr, void *cookie)
         return frame_result;
     }
     seL4_Word vka_cookie;
-    err = vka_utspace_alloc_at(vm->vka, &frame, kobject_get_type(KOBJECT_FRAME, 12), 12, GIC_VCPU_PADDR, &vka_cookie);
+    err = vka_utspace_alloc_at(vm->vka, &frame, kobject_get_type(KOBJECT_FRAME, 12), 12, vcpu_addr, &vka_cookie);
     if (err) {
-        err = simple_get_frame_cap(vm->simple, (void *)GIC_VCPU_PADDR, 12, &frame);
+        err = simple_get_frame_cap(vm->simple, (void *)vcpu_addr, 12, &frame);
         if (err) {
             ZF_LOGE("Failed to find device cap for vgic vcpu");
             return frame_result;
@@ -225,7 +286,7 @@ static vm_frame_t vgic_vcpu_iterator(uintptr_t addr, void *cookie)
     }
     frame_result.cptr = frame.capPtr;
     frame_result.rights = seL4_AllRights;
-    frame_result.vaddr = GIC_CPU_PADDR;
+    frame_result.vaddr = cpu_addr;
     frame_result.size_bits = seL4_PageBits;
     return frame_result;
 }
@@ -236,6 +297,9 @@ static vm_frame_t vgic_vcpu_iterator(uintptr_t addr, void *cookie)
  */
 int vm_install_vgic(vm_t *vm)
 {
+    /* Read device tree to find memory regions */
+    gic_get_registers_from_fdt(vm, &dist_addr, &cpu_addr, &vcpu_addr);
+
     struct vgic *vgic = calloc(1, sizeof(*vgic));
     if (!vgic) {
         assert(!"Unable to calloc memory for VGIC");
@@ -251,19 +315,21 @@ int vm_install_vgic(vm_t *vm)
         return -1;
     }
     memcpy(vgic_dist, &dev_vgic_dist, sizeof(struct vgic_dist_device));
+    vgic_dist->pstart = dist_addr;
 
     vgic->dist = calloc(1, sizeof(struct gic_dist_map));
     assert(vgic->dist);
     if (vgic->dist == NULL) {
         return -1;
     }
-    vm_memory_reservation_t *vgic_dist_res = vm_reserve_memory_at(vm, GIC_DIST_PADDR, PAGE_SIZE_4K,
+
+    vm_memory_reservation_t *vgic_dist_res = vm_reserve_memory_at(vm, dist_addr, PAGE_SIZE_4K,
                                                                   handle_vgic_dist_fault, (void *)vgic_dist);
     vgic_dist->vgic = vgic;
     vgic_dist_reset(vgic_dist);
 
     /* Remap VCPU to CPU */
-    vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR, PAGE_SIZE_4K,
+    vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, cpu_addr, PAGE_SIZE_4K,
                                                                           handle_vgic_vcpu_fault, NULL);
     int err = vm_map_reservation(vm, vgic_vcpu_reservation, vgic_vcpu_iterator, (void *)vm);
     if (err) {
@@ -292,7 +358,7 @@ int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
 }
 
 const struct vgic_dist_device dev_vgic_dist = {
-    .pstart = GIC_DIST_PADDR,
+    .pstart = 0,
     .size = 0x1000,
     .vgic = NULL,
 };
