@@ -38,6 +38,14 @@ config_string(
     "LibSel4VMVMXTimerDebug"
 )
 
+config_choice(
+    LibSel4VMGuestRAMPageBits
+    LIB_SEL4VM_GUEST_RAM_PAGE_BITS
+    "LibSel4VM page size (bits) used for guest VM RAM"
+    "12;LibSel4VMGuestRAMPageBits12;LIB_SEL4VM_GUEST_RAM_PAGE_BITS_12"
+    "21;LibSel4VMGuestRAMPageBits21;LIB_SEL4VM_GUEST_RAM_PAGE_BITS_21"
+)
+
 mark_as_advanced(LibSel4VMDeferMemoryMap LibSel4VMVMXTimerDebug LibSel4VMVMXTimerTimeout)
 
 add_config_library(sel4vm "${configure_string}")

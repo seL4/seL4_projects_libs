@@ -10,6 +10,7 @@
 
 #include <sel4/sel4.h>
 
+#include <sel4vm/gen_config.h>
 #include <sel4vm/guest_vm.h>
 #include <sel4vm/guest_ram.h>
 #include <sel4vm/guest_memory.h>
@@ -169,14 +170,22 @@ int vm_ram_touch(vm_t *vm, uintptr_t addr, size_t size, ram_touch_callback_fn to
     access_cookie.data = cookie;
     access_cookie.vm = vm;
     for (current_addr = addr; current_addr < end_addr; current_addr = next_addr) {
+#if defined(CONFIG_LIB_SEL4VM_GUEST_RAM_PAGE_BITS_12)
         uintptr_t current_aligned = PAGE_ALIGN_4K(current_addr);
         uintptr_t next_page_start = current_aligned + PAGE_SIZE_4K;
+#elif defined(CONFIG_LIB_SEL4VM_GUEST_RAM_PAGE_BITS_21)
+        uintptr_t current_aligned = PAGE_ALIGN_2M(current_addr);
+        uintptr_t next_page_start = current_aligned + PAGE_SIZE_2M;
+#endif
         next_addr = MIN(end_addr, next_page_start);
         access_cookie.size = next_addr - current_addr;
         access_cookie.offset = current_addr - addr;
         access_cookie.current_addr = current_addr;
-        int result = vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace, (void *)current_aligned,
-                                                      seL4_PageBits, seL4_AllRights, 1, touch_access_callback, &access_cookie);
+        int result = vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace,
+                                                      (void *)current_aligned,
+                                                      CONFIG_LIB_SEL4VM_GUEST_RAM_PAGE_BITS,
+                                                      seL4_AllRights, 1, touch_access_callback,
+                                                      &access_cookie);
         if (result) {
             return result;
         }
@@ -265,7 +274,7 @@ static vm_frame_t ram_alloc_iterator(uintptr_t addr, void *cookie)
     if (!vm) {
         return frame_result;
     }
-    int page_size = seL4_PageBits;
+    int page_size = CONFIG_LIB_SEL4VM_GUEST_RAM_PAGE_BITS;
     uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
     ret = vka_alloc_frame_maybe_device(vm->vka, page_size, true, &object);
     if (ret) {
@@ -289,7 +298,7 @@ static vm_frame_t ram_ut_alloc_iterator(uintptr_t addr, void *cookie)
     if (!vm) {
         return frame_result;
     }
-    int page_size = seL4_PageBits;
+    int page_size = CONFIG_LIB_SEL4VM_GUEST_RAM_PAGE_BITS;
     uintptr_t frame_start = ROUND_DOWN(addr, BIT(page_size));
     cspacepath_t path;
     error = vka_cspace_alloc_path(vm->vka, &path);
@@ -336,7 +345,7 @@ uintptr_t vm_ram_register(vm_t *vm, size_t bytes)
     int err;
     uintptr_t base_addr;
 
-    ram_reservation = vm_reserve_anon_memory(vm, bytes, BIT(seL4_PageBits),
+    ram_reservation = vm_reserve_anon_memory(vm, bytes, BIT(CONFIG_LIB_SEL4VM_GUEST_RAM_PAGE_BITS),
                                              default_ram_fault_callback, NULL,
                                              &base_addr);
     if (!ram_reservation) {
