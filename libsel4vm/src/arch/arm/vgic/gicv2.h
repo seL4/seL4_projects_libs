@@ -24,6 +24,8 @@
 #define GIC_PADDR   0xc4300000
 #elif defined(CONFIG_PLAT_ZYNQMP)
 #define GIC_PADDR   0xf9000000
+#elif defined(CONFIG_PLAT_BCM2711)
+#define GIC_PADDR   0xff840000
 #elif defined(CONFIG_PLAT_STM32MP2)
 #define GIC_PADDR   0x4ac00000
 #else
