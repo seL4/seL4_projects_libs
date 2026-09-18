@@ -109,7 +109,14 @@ static void handle_virtio_blk_request(virtio_emul_t *emul)
          *  We could fix this, but not sure if it is necessary based on the
          *  FileSystem types that have been tested
          */
-        assert(buf_len <= MAX_DATA_BUF_SIZE);
+        if (buf_len > MAX_DATA_BUF_SIZE) {
+            ZF_LOGE("virtio blk: data buffer of %u bytes exceeds maximum %u, dropping request",
+                    buf_len, MAX_DATA_BUF_SIZE);
+            /* return the chain back to the guest without writing any data */
+            complete_virtio_blk_request(emul, cookie);
+            idx++;
+            continue;
+        }
 
         struct virtio_blk_outhdr hdr;
         memcpy(&hdr, vaddr, sizeof(struct virtio_blk_outhdr));
