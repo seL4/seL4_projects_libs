@@ -55,12 +55,19 @@ int handle_psci(vm_vcpu_t *vcpu, seL4_UserContext *regs, seL4_Word fn_number, bo
             } else {
                 smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
             }
-        } else {
+        } else if ((target_vcpu->target_cpu >= 0) && (target_vcpu->target_cpu < CONFIG_MAX_NUM_NODES)) {
+            /* Assign vcpu to physical cpu specified in config */
             if (is_vcpu_online(target_vcpu)) {
                 smc_set_return_value(regs, PSCI_ALREADY_ON);
+            } else if (start_new_vcpu(target_vcpu, entry_point_address, context_id, target_vcpu->target_cpu) == 0) {
+                smc_set_return_value(regs, PSCI_SUCCESS);
             } else {
+                ZF_LOGE("[vCPU %u] could not start vCPU", vcpu->vcpu_id);
                 smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
             }
+        } else {
+            ZF_LOGE("[vCPU %u] invalid target CPU %d", vcpu->vcpu_id, target_vcpu->target_cpu);
+            smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
         }
 
         break;

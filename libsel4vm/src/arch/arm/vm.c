@@ -180,7 +180,7 @@ int vcpu_start(vm_vcpu_t *vcpu)
          */
         vmpidr_val = BIT(24) | BIT(31);
     } else {
-        vmpidr_val = vcpu->target_cpu;
+        vmpidr_val = vcpu->vcpu_id;
     }
     err = vm_set_arm_vcpu_reg(vcpu, vmpidr_reg, vmpidr_val);
     if (err) {
