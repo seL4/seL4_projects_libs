@@ -7,6 +7,7 @@
 #pragma once
 
 #include <sel4vm/guest_vm.h>
+#include <sel4vm/guest_vcpu_fault.h>
 #include <sel4vm/arch/processor.h>
 #include <sel4vm/sel4_arch/processor.h>
 #include <sel4vmmplatsupport/arch/guest_vcpu_fault.h>
@@ -14,8 +15,23 @@
 #include "vcpu_fault.h"
 #include "smc.h"
 
+/*
+ * HSR_CP14_32_EXCEPTION is a trapped MCR or MRC access to CP14. Ignore all
+ * trapped writes to these registers for now and leave Rt unchanged on reads.
+ * These accesses are mostly used by Linux during boot to set up registers seL4
+ * traps and already sets up itself.
+ *
+ * Currently seL4 only traps ThmbEE/Jazelle access, which is unused in our VMs.
+ */
+static inline int ignore_cp14_exception(vm_vcpu_t *vcpu, uint32_t hsr)
+{
+    advance_vcpu_fault(vcpu);
+    return 0;
+}
+
 static vcpu_exception_handler_fn vcpu_exception_handlers[] = {
     [0 ... HSR_MAX_EXCEPTION] = unknown_vcpu_exception_handler,
     [HSR_WFx_EXCEPTION] = ignore_exception,
+    [HSR_CP14_32_EXCEPTION] = ignore_cp14_exception,
     [HSR_SMC_EXCEPTION] = handle_smc,
 };
