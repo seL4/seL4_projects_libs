@@ -582,7 +582,8 @@ int fault_is_vcpu(fault_t *f)
 int fault_is_32bit_instruction(fault_t *f)
 {
     if (fault_is_vcpu(f)) {
-        return !fault_is_thumb(f);
+        /* HSR IL bit is valid for all faults we handle here */
+        return HSR_IS_INST32(f->fsr);
     }
     if (!HSR_IS_SYNDROME_VALID(f->fsr)) {
         /* (maybe) Trigger a decode to update the fsr. */
