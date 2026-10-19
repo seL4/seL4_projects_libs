@@ -110,12 +110,6 @@ int vm_create_vcpu_arch(vm_t *vm, vm_vcpu_t *vcpu)
     vcpu->vcpu_arch.unhandled_vcpu_callback = NULL;
     vcpu->vcpu_arch.unhandled_vcpu_callback_cookie = NULL;
 
-#if CONFIG_MAX_NUM_NODES > 1
-    if (seL4_TCB_SetAffinity(vcpu->tcb.tcb.cptr, vcpu->vcpu_id)) {
-        err = -1;
-    }
-#endif /* CONFIG_MAX_NUM_NODES > 1 */
-
 #ifdef CONFIG_DEBUG_BUILD
     char vcpu_name[32];
     snprintf(vcpu_name, sizeof(vcpu_name), "%s:%d", vm->vm_name, vcpu->vcpu_id);
