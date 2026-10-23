@@ -32,6 +32,18 @@ sysreg_entry_t sysreg_table[] = {
         .sysreg_match_mask = { .hsr_val = SYSREG_OP0_MASK },
         .handler = ignore_sysreg_exception
     },
+    /* Performance Monitors registers, S3_<op1>_c9_c<crm>_<op2> */
+    {
+        .sysreg = { .params.op0 = 3, .params.crn = 9 },
+        .sysreg_match_mask = { .hsr_val = SYSREG_OP0_MASK | SYSREG_CRn_MASK },
+        .handler = ignore_sysreg_exception
+    },
+    /* PMEVCNTR<n>_EL0, PMEVTYPER<n>_EL0, PMCCFILTR_EL0: S3_3_c14_c<8..15>_<op2> */
+    {
+        .sysreg = { .params.op0 = 3, .params.op1 = 3, .params.crn = 14, .params.crm = 0b1000 },
+        .sysreg_match_mask = { .hsr_val = SYSREG_OP0_MASK | SYSREG_OP1_MASK | SYSREG_CRn_MASK | (0b1000 << SYSREG_CRm_SHIFT) },
+        .handler = ignore_sysreg_exception
+    },
 };
 
 static int ignore_sysreg_exception(vm_vcpu_t *vcpu, sysreg_t *sysreg, bool is_read)
