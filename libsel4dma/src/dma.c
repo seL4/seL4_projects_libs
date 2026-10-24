@@ -24,8 +24,6 @@
 
 #if defined(CONFIG_PLAT_IMX6) || defined(IMX6)
 #define DMA_MINALIGN_BYTES 32
-#elif defined(CONFIG_PLAT_EXYNOS4)
-#define DMA_MINALIGN_BYTES 32
 #elif defined(CONFIG_PLAT_EXYNOS5)
 #define DMA_MINALIGN_BYTES 32
 #elif defined(CONFIG_PLAT_ZYNQMP)
