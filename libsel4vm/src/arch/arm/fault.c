@@ -19,25 +19,11 @@
 #include <sel4/sel4_arch/constants.h>
 
 //#define DEBUG_FAULTS
-//#define DEBUG_ERRATA
 
 #ifdef DEBUG_FAULTS
 #define DFAULT(...) printf(__VA_ARGS__)
 #else
 #define DFAULT(...) do{}while(0)
-#endif
-
-#ifdef DEBUG_ERRATA
-#define DERRATA(...) printf(__VA_ARGS__)
-#else
-#define DERRATA(...) do{}while(0)
-#endif
-
-#ifdef PLAT_EXYNOS5250
-/* Stores in thumb mode trigger this errata */
-#define HAS_ERRATA766422(f) ( fault_is_write(f) && fault_is_thumb(f))
-#else
-#define HAS_ERRATA766422(f) 0
 #endif
 
 #define HSR_INST32                 BIT(25)
@@ -97,53 +83,6 @@ static int maybe_fetch_fault_instruction(fault_t *f)
         f->content |= CONTENT_INST;
     }
     return 0;
-}
-
-static int errata766422_get_rt(fault_t *f, seL4_Word hsr)
-{
-    seL4_Word inst;
-    int err;
-    err = maybe_fetch_fault_instruction(f);
-    inst = f->instruction;
-    if (err) {
-        return err;
-    }
-    if (HSR_IS_INST32(hsr)) {
-        DERRATA("Errata766422 @ 0x%08x (0x%08x)\n", fault_get_ctx(f)->pc, inst);
-        if ((inst & 0xff700000) == 0xf8400000) {
-            return (inst >> 12) & 0xf;
-        } else if ((inst & 0xfff00000) == 0xf8800000) {
-            return (inst >> 12) & 0xf;
-        } else if ((inst & 0xfff00000) == 0xf0000000) {
-            return (inst >> 12) & 0xf;
-        } else if ((inst & 0x0e500000) == 0x06400000) {
-            return (inst >> 12) & 0xf;
-        } else if ((inst & 0xfff00000) == 0xf8000000) {
-            return (inst >> 12) & 0xf;
-        } else {
-            printf("Unable to decode inst %08lx\n", (long) inst);
-            return -1;
-        }
-    } else {
-        DERRATA("Errata766422 @ 0x%08lx (0x%04lx)\n", (long) fault_get_ctx(f)->pc, (long) inst);
-        /* 16 bit insts */
-        if ((inst & 0xf800) == 0x6000) {
-            return (inst >> 0) & 0x7;
-        } else if ((inst & 0xf800) == 0x9000) {
-            return (inst >> 8) & 0x7;
-        } else if ((inst & 0xf800) == 0x5000) {
-            return (inst >> 0) & 0x7;
-        } else if ((inst & 0xfe00) == 0x5400) {
-            return (inst >> 0) & 0x7;
-        } else if ((inst & 0xf800) == 0x7000) {
-            return (inst >> 0) & 0x7;
-        } else if ((inst & 0xf800) == 0x8000) {
-            return (inst >> 0) & 0x7;
-        } else {
-            printf("Unable to decode inst 0x%04lx\n", (long) inst);
-            return -1;
-        }
-    }
 }
 
 static int decode_instruction(fault_t *f)
@@ -247,12 +186,7 @@ static int get_rt(fault_t *f)
 
     int rt;
     if (HSR_IS_SYNDROME_VALID(f->fsr)) {
-        if (HAS_ERRATA766422(f)) {
-            rt = errata766422_get_rt(f, f->fsr);
-        } else {
-            rt = HSR_SYNDROME_RT(f->fsr);
-            //printf("here rt %d\n", rt);
-        }
+        rt = HSR_SYNDROME_RT(f->fsr);
     } else {
 #ifdef CONFIG_ARCH_AARCH64
         printf("decode_insturction for arm64 not implemented\n");

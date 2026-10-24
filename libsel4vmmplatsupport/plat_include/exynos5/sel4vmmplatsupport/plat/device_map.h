@@ -9,8 +9,6 @@
 /* GPIO */
 #if defined CONFIG_PLAT_EXYNOS54XX   /* Odroid-XU/XU3 */
 #define GPIO_LEFT_PADDR       0x14000000
-#elif defined CONFIG_PLAT_EXYNOS5250 /* Arndale */
-#define GPIO_LEFT_PADDR       0x11400000
 #else
 #error UNKNOWN SoC
 #endif
