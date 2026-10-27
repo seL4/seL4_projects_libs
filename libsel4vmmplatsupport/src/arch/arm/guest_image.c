@@ -99,13 +99,6 @@ static enum img_type image_get_type(void *file)
     }
 }
 
-static uintptr_t zImage_get_load_address(void *file, uintptr_t ram_base)
-{
-    struct zimage_hdr *hdr;
-    hdr = (struct zimage_hdr *)file;
-    return (hdr->start != 0) ? hdr->start : (ram_base + 0x8000);
-}
-
 static int get_guest_image_type(const char *image_name, enum img_type *image_type, Elf64_Ehdr *header)
 {
     int fd;
@@ -199,7 +192,11 @@ static uintptr_t load_guest_kernel_image(vm_t *vm, const char *kernel_image_name
         load_addr = vm->entry;
         break;
     case IMG_ZIMAGE:
-        load_addr = zImage_get_load_address(&header, load_base_addr);
+        /* zImage is used for 32-bit Linux kernels only. */
+        load_addr = ((struct zimage_hdr *)(&header))->start;
+        if (0 == load_addr) {
+            load_addr = vm->entry;
+        }
         break;
     default:
         ZF_LOGE("Error: Unknown kernel image format for '%s'", kernel_image_name);
