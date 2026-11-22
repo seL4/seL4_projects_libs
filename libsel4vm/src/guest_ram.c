@@ -13,8 +13,12 @@
 #include <sel4vm/guest_vm.h>
 #include <sel4vm/guest_ram.h>
 #include <sel4vm/guest_memory.h>
+#include <sel4vm/gen_config.h>
+
+#include <sel4utils/vspace_internal.h>
 
 #include "guest_memory.h"
+#include "guest_vspace.h"
 
 struct guest_mem_touch_params {
     void *data;
@@ -175,8 +179,24 @@ int vm_ram_touch(vm_t *vm, uintptr_t addr, size_t size, ram_touch_callback_fn to
         access_cookie.size = next_addr - current_addr;
         access_cookie.offset = current_addr - addr;
         access_cookie.current_addr = current_addr;
+#ifdef CONFIG_LIB_SEL4VM_USE_TRANSLATION_VSPACE
+        struct sel4utils_alloc_data *data = get_alloc_data(&vm->mem.vm_vspace);
+        ZF_LOGF_IF(NULL == data, "Failed to get alloc data");
+        guest_vspace_t *guest_vspace = (guest_vspace_t *) data;
+
+        void *vaddr = (void *)sel4utils_get_cookie(&guest_vspace->translation_vspace, (void *)current_aligned);
+        if (!vaddr) {
+            ZF_LOGE("Failed to get cookie at %p", (void *)current_aligned);
+            return -1;
+        }
+
+        int result = touch_callback(vm, current_addr, (void *)(vaddr + (current_addr - current_aligned)),
+                                    next_addr - current_addr, current_addr - addr, cookie);
+#else
+
         int result = vspace_access_page_with_callback(&vm->mem.vm_vspace, &vm->mem.vmm_vspace, (void *)current_aligned,
                                                       seL4_PageBits, seL4_AllRights, 1, touch_access_callback, &access_cookie);
+#endif
         if (result) {
             return result;
         }
