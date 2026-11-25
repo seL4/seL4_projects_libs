@@ -76,7 +76,7 @@ typedef struct vgic_vcpu {
 /* GIC global interrupt context */
 typedef struct vgic {
     /* virtual distributor registers */
-    struct gic_dist_map *dist;
+    void *registers;
     /* registered global interrupts (SPI) */
     virq_handle_t vspis[NUM_SLOTS_SPI_VIRQ];
     /* vCPU specific interrupt context */
