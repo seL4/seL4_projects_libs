@@ -276,18 +276,23 @@ int vm_install_vgic(vm_t *vm)
 
 int vm_vgic_maintenance_handler(vm_vcpu_t *vcpu)
 {
-    int idx = seL4_GetMR(seL4_VGICMaintenance_IDX);
-    /* Currently not handling spurious IRQs */
-    assert(idx >= 0);
+    uint64_t eisr = seL4_GetMR(seL4_VGICMaintenance_EISR1);
+    eisr <<= 32;
+    eisr |= seL4_GetMR(seL4_VGICMaintenance_EISR0);
 
-    int err = handle_vgic_maintenance(vcpu, idx);
-    if (!err) {
-        seL4_MessageInfo_t reply;
-        reply = seL4_MessageInfo_new(0, 0, 0, 0);
-        seL4_Reply(reply);
-    } else {
-        ZF_LOGF("vGIC maintenance handler failed (error %d)", err);
+    while (eisr) {
+        int idx = __builtin_ctzll(eisr);
+        int err = handle_vgic_maintenance(vcpu, idx);
+        if (err) {
+            ZF_LOGF("vGIC maintenance handler failed (error %d)", err);
+        }
+        eisr &= ~(1ULL << idx);
     }
+
+    seL4_MessageInfo_t reply;
+    reply = seL4_MessageInfo_new(0, 0, 0, 0);
+    seL4_Reply(reply);
+
     return VM_EXIT_HANDLED;
 }
 
