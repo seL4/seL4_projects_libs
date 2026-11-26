@@ -76,6 +76,11 @@ vm_vcpu_t *vm_create_vcpu(vm_t *vm, int priority)
     vcpu_new->target_cpu = -1;
     err = vm_create_vcpu_arch(vm, vcpu_new);
     assert(!err);
+#ifdef CONFIG_DEBUG_BUILD
+    char vcpu_name[32];
+    snprintf(vcpu_name, sizeof(vcpu_name), "%s:%d", vm->vm_name, vcpu_new->vcpu_id);
+    seL4_DebugNameThread(vm_get_vcpu_tcb(vcpu_new), vcpu_name);
+#endif
     vm->vcpus[vm->num_vcpus] = vcpu_new;
     vm->num_vcpus++;
     return vcpu_new;
